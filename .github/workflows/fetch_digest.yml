@@ -1,0 +1,43 @@
+name: Fetch Daily Digest
+
+on:
+  schedule:
+    # 매일 08:15 KST = 전날 23:15 UTC (KST는 UTC+9)
+    - cron: "15 23 * * *"
+  workflow_dispatch: {}   # 手動으로도 실행 가능하게 (Actions 탭에서 Run workflow 버튼)
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: Gmail 인증 정보 복원
+        run: |
+          echo "$GMAIL_CREDENTIALS_JSON" > fetcher/credentials.json
+          echo "$GMAIL_TOKEN_JSON" > fetcher/token.json
+        env:
+          GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
+          GMAIL_TOKEN_JSON: ${{ secrets.GMAIL_TOKEN_JSON }}
+
+      - name: DB 마이그레이션 (혹시 새 마이그레이션 있으면 적용)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+        run: python manage.py migrate
+
+      - name: 다이제스트 수집 + 저장
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python manage.py fetch_digest

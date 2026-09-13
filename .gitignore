@@ -1,0 +1,19 @@
+# 인증/비밀 정보 — 절대 커밋 금지
+.env
+fetcher/credentials.json
+fetcher/token.json
+
+# Python
+__pycache__/
+*.pyc
+venv/
+*.egg-info/
+
+# Django
+db.sqlite3
+*.log
+
+# 에디터/OS
+.vscode/
+.idea/
+.DS_Store
