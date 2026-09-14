@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -6,6 +6,7 @@ from .models import DailyDigest, Term
 from .serializers import (
     DailyDigestDetailSerializer,
     DailyDigestListSerializer,
+    TermFamiliarityUpdateSerializer,
     TermSerializer,
 )
 
@@ -33,14 +34,26 @@ class DailyDigestViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
 
-class TermViewSet(viewsets.ReadOnlyModelViewSet):
+class TermViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,   # 자기 채점(familiarity 수정)을 위해 PATCH 허용. 생성/삭제는 막아둔다.
+    viewsets.GenericViewSet,
+):
     """
-    GET /api/terms/                     -> 전체 용어 사전
-    GET /api/terms/?familiarity=new     -> 익숙도로 필터링
+    GET   /api/terms/                      -> 전체 용어 사전
+    GET   /api/terms/?familiarity=new      -> 익숙도로 필터링
+    PATCH /api/terms/{id}/                 -> 자기 채점 결과 반영 (familiarity 변경)
+    POST  /api/terms/{id}/check_answer/    -> 서술형 답변을 Gemini로 첨삭
     """
 
     queryset = Term.objects.all()
     serializer_class = TermSerializer
+
+    def get_serializer_class(self):
+        if self.action in ("update", "partial_update"):
+            return TermFamiliarityUpdateSerializer
+        return TermSerializer
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -48,3 +61,28 @@ class TermViewSet(viewsets.ReadOnlyModelViewSet):
         if familiarity:
             qs = qs.filter(familiarity=familiarity)
         return qs
+
+    @action(detail=True, methods=["post"])
+    def check_answer(self, request, pk=None):
+        term = self.get_object()
+        user_answer = request.data.get("answer", "").strip()
+
+        if not user_answer:
+            return Response({"detail": "answer 값이 비어있습니다."}, status=400)
+
+        # 무거운 의존성(google-genai)은 이 액션을 쓸 때만 로드한다
+        from fetcher.gemini_parser import check_term_answer
+
+        try:
+            result = check_term_answer(
+                term=term.term,
+                meaning=term.meaning,
+                relevance=term.relevance,
+                user_answer=user_answer,
+            )
+        except Exception as e:
+            return Response(
+                {"detail": f"AI 첨삭 중 오류가 발생했습니다: {e}"}, status=502
+            )
+
+        return Response(result)

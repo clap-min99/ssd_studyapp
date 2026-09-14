@@ -31,6 +31,13 @@ class TermSerializer(serializers.ModelSerializer):
             "first_seen_date",
         ]
 
+class TermFamiliarityUpdateSerializer(serializers.ModelSerializer):
+    """자기 채점 결과 반영 전용 — familiarity 외에는 이 경로로 수정 불가하게 제한한다."""
+
+    class Meta:
+        model = Term
+        fields = ["id", "familiarity"]
+
 
 class DailyDigestListSerializer(serializers.ModelSerializer):
     """타임라인처럼 목록으로 보여줄 때 쓰는 가벼운 버전 (하위 항목은 개수만)."""

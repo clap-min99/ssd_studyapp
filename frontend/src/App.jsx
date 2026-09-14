@@ -3,6 +3,7 @@ import TodayFeed from "./pages/TodayFeed";
 import Timeline from "./pages/Timeline";
 import DigestDetail from "./pages/DigestDetail";
 import Glossary from "./pages/Glossary";
+import Review from "./pages/Review";
 import "./App.css";
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/digest/:id" element={<DigestDetail />} />
           <Route path="/glossary" element={<Glossary />} />
+          <Route path="/review" element={<Review />} />
         </Routes>
       </main>
 
@@ -26,6 +28,9 @@ export default function App() {
         </NavLink>
         <NavLink to="/glossary" className="nav-item">
           용어사전
+        </NavLink>
+        <NavLink to="/review" className="nav-item">
+          복습
         </NavLink>
       </nav>
     </div>

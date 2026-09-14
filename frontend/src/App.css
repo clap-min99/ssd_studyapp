@@ -162,3 +162,114 @@ h3 {
   font-size: 12px;
   color: #999;
 }
+
+/* --- 복습 화면 --- */
+.review-progress {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.flashcard {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 16px;
+  padding: 24px 18px;
+  text-align: center;
+}
+
+.flashcard h2 {
+  font-size: 22px;
+  margin: 0 0 16px;
+}
+
+.answer-input {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 14px;
+}
+
+.answer-preview {
+  text-align: left;
+  font-size: 13px;
+  color: #777;
+  background: #f7f7f7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.meaning-card {
+  text-align: left;
+  margin-bottom: 14px;
+}
+
+.btn-primary, .btn-secondary {
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-primary {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.btn-secondary {
+  background: #eee;
+  color: #333;
+  margin-bottom: 14px;
+}
+
+.ai-feedback {
+  text-align: left;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.ai-feedback p {
+  margin: 6px 0 0;
+  color: inherit;
+}
+
+.verdict-correct { background: #eafaf0; color: #1e7e42; }
+.verdict-partial { background: #fff8e5; color: #8a6d00; }
+.verdict-wrong   { background: #fdecea; color: #b93124; }
+
+.self-grade-label {
+  font-size: 12px;
+  color: #999;
+  margin: 4px 0 8px;
+}
+
+.self-grade-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.grade-btn {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+
+.grade-wrong   { background: #e0574f; }
+.grade-partial { background: #e0a83f; }
+.grade-correct { background: #4caf7d; }

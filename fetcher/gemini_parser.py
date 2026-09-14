@@ -98,10 +98,14 @@ class ParsedDigest:
     no_article_categories: list[str] = field(default_factory=list)
 
 
+def _get_client() -> genai.Client:
+    return genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+
 def parse_digest_with_gemini(raw_text: str) -> ParsedDigest:
     """다이제스트 원문을 Gemini API로 구조화한다."""
 
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    client = _get_client()
 
     response = client.models.generate_content(
         model=MODEL,
@@ -131,6 +135,62 @@ def parse_digest_with_gemini(raw_text: str) -> ParsedDigest:
         terms=[Term(**t) for t in data.get("terms", [])],
         no_article_categories=data.get("no_article_categories", []),
     )
+
+
+ANSWER_CHECK_SYSTEM_PROMPT = """\
+너는 SSD/NAND 컨트롤러 펌웨어 취업 준비생의 용어 복습을 도와주는 첨삭자다.
+
+사용자에게 용어 하나가 주어지고, 사용자는 그 뜻을 자기 언어로 설명한다.
+사용자의 설명을 "정답 의미"와 비교해서, 사전적으로 똑같은지가 아니라
+핵심 개념을 제대로 짚었는지를 기준으로 평가하라.
+
+반드시 아래 JSON 스키마로만 응답하라.
+
+{
+  "verdict": "correct" 또는 "partial" 또는 "wrong",
+  "feedback": "한두 문장. 무엇을 잘 짚었고 무엇이 빠졌는지 구체적으로"
+}
+
+기준:
+- correct: 핵심 개념을 정확히 이해하고 설명함 (표현이 다소 서툴러도 괜찮음)
+- partial: 방향은 맞지만 중요한 부분이 빠졌거나 부정확함
+- wrong: 핵심을 잘못 이해했거나 answer가 무관함
+- feedback은 채점하듯 말하지 말고, 빠진 부분을 짚어주는 톤으로 (예: "GC의 기본 동작은 잘 짚었지만, Write Amplification과의 연관성이 빠졌어요")
+"""
+
+
+def check_term_answer(term: str, meaning: str, relevance: str, user_answer: str) -> dict:
+    """사용자가 직접 쓴 용어 설명을 Gemini로 채점한다.
+
+    Returns:
+        {"verdict": "correct" | "partial" | "wrong", "feedback": "..."}
+    """
+    client = _get_client()
+
+    prompt = (
+        f"용어: {term}\n"
+        f"정답 의미: {meaning}\n"
+        f"펌웨어와의 관련성: {relevance or '(없음)'}\n"
+        f"사용자의 설명: {user_answer}"
+    )
+
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=ANSWER_CHECK_SYSTEM_PROMPT,
+            response_mime_type="application/json",
+        ),
+    )
+
+    text = response.text.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+
+    return json.loads(text)
 
 
 if __name__ == "__main__":

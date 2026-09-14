@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 import os
 from pathlib import Path
-
+from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -26,10 +26,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-4iei#nn2jmw@c-vni@+ockm+5+mmocj)joxps^fs!n)ne+#-w4',  # 로컬 개발용 기본값
-)
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY 환경변수가 설정되지 않았습니다. "
+        "로컬 개발 시에는 .env 파일에, 배포 시에는 Render 환경변수에 추가하세요.\n"
+        "새 값 생성: python -c \"import secrets; print(secrets.token_urlsafe(50))\""
+    )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
