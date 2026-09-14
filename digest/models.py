@@ -130,3 +130,42 @@ class ReviewRecord(models.Model):
         self.next_review_date = timezone.localdate() + timezone.timedelta(
             days=self.interval_days
         )
+
+
+class Insight(models.Model):
+    """다이제스트 하나 읽고 난 뒤의 내 생각. 유저당·다이제스트당 하나만 존재한다."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="insights"
+    )
+    digest = models.ForeignKey(
+        DailyDigest, on_delete=models.CASCADE, related_name="insights"
+    )
+    text = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["user", "digest"]
+
+    def __str__(self) -> str:
+        return f"{self.user} · {self.digest} 인사이트"
+
+
+class Question(models.Model):
+    """추가로 공부할 질문. 다이제스트 하나당 여러 개 남길 수 있고, 해결 여부를 체크한다."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="questions"
+    )
+    digest = models.ForeignKey(
+        DailyDigest, on_delete=models.CASCADE, related_name="questions"
+    )
+    text = models.TextField()
+    resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["resolved", "-created_at"]
+
+    def __str__(self) -> str:
+        return self.text[:50]

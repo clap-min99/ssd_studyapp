@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Article, DailyDigest, LearningItem, ReviewRecord, Term
+from .models import Article, DailyDigest, Insight, LearningItem, Question, ReviewRecord, Term
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -108,3 +108,18 @@ class ReviewAnswerSerializer(serializers.Serializer):
     familiarity = serializers.ChoiceField(
         choices=[c[0] for c in ReviewRecord.FAMILIARITY_CHOICES]
     )
+
+
+class InsightSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Insight
+        fields = ["id", "text", "updated_at"]
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    digest_date = serializers.DateField(source="digest.date", read_only=True)
+
+    class Meta:
+        model = Question
+        fields = ["id", "text", "resolved", "created_at", "digest_date"]
+        read_only_fields = ["created_at"]

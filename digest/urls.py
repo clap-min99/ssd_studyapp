@@ -5,6 +5,7 @@ from .views import (
     DailyDigestViewSet,
     DueReviewsView,
     LoginView,
+    QuestionViewSet,
     SubmitReviewAnswerView,
     TermViewSet,
 )
@@ -12,6 +13,7 @@ from .views import (
 router = DefaultRouter()
 router.register("digests", DailyDigestViewSet, basename="digest")
 router.register("terms", TermViewSet, basename="term")
+router.register("questions", QuestionViewSet, basename="question")
 
 urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),

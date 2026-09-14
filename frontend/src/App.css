@@ -446,3 +446,48 @@ h3 {
   cursor: pointer;
   padding: 0;
 }
+
+/* --- 질문 체크리스트 --- */
+.question-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.question-item input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.question-text {
+  flex: 1;
+  font-size: 14px;
+  color: #3a3d42;
+}
+
+.question-text.resolved {
+  color: #b0b3b8;
+  text-decoration: line-through;
+}
+
+.question-delete {
+  border: none;
+  background: none;
+  color: #c9ccd1;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.question-add-form {
+  margin-top: 10px;
+}
+
+.question-add-form .search-input {
+  margin-bottom: 0;
+}

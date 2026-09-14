@@ -8,11 +8,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticate
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import DailyDigest, ReviewRecord, Term
+from .models import DailyDigest, Insight, Question, ReviewRecord, Term
 from .serializers import (
     DailyDigestDetailSerializer,
     DailyDigestListSerializer,
     DueTermSerializer,
+    InsightSerializer,
+    QuestionSerializer,
     ReviewAnswerSerializer,
     TermDetailSerializer,
     TermSerializer,
@@ -63,6 +65,42 @@ class DailyDigestViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"detail": "아직 저장된 다이제스트가 없습니다."}, status=404)
         serializer = self.get_serializer(digest)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["get", "put"], permission_classes=[IsAuthenticated])
+    def insight(self, request, pk=None):
+        """
+        GET /api/digests/{id}/insight/  -> 내가 이 다이제스트에 남긴 생각 (없으면 빈 텍스트)
+        PUT /api/digests/{id}/insight/  { "text": "..." } -> 저장(있으면 덮어쓰기)
+        """
+        digest = self.get_object()
+
+        if request.method == "GET":
+            obj = Insight.objects.filter(user=request.user, digest=digest).first()
+            return Response({"text": obj.text if obj else ""})
+
+        text = request.data.get("text", "").strip()
+        obj, _ = Insight.objects.update_or_create(
+            user=request.user, digest=digest, defaults={"text": text}
+        )
+        return Response(InsightSerializer(obj).data)
+
+    @action(detail=True, methods=["get", "post"], permission_classes=[IsAuthenticated])
+    def questions(self, request, pk=None):
+        """
+        GET  /api/digests/{id}/questions/  -> 내가 이 다이제스트에 남긴 질문 목록
+        POST /api/digests/{id}/questions/  { "text": "..." } -> 새 질문 추가
+        """
+        digest = self.get_object()
+
+        if request.method == "GET":
+            qs = Question.objects.filter(user=request.user, digest=digest)
+            return Response(QuestionSerializer(qs, many=True).data)
+
+        text = request.data.get("text", "").strip()
+        if not text:
+            return Response({"detail": "text 값이 비어있습니다."}, status=400)
+        q = Question.objects.create(user=request.user, digest=digest, text=text)
+        return Response(QuestionSerializer(q).data, status=201)
 
 
 class TermViewSet(
@@ -179,3 +217,29 @@ class SubmitReviewAnswerView(APIView):
                 "next_review_date": record.next_review_date,
             }
         )
+
+
+class QuestionViewSet(
+    mixins.ListModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    GET    /api/questions/                  -> 내가 남긴 질문 전체 (해결 여부 무관)
+    GET    /api/questions/?resolved=false   -> 아직 안 푼 질문만
+    PATCH  /api/questions/{id}/             { "resolved": true } -> 해결 체크
+    DELETE /api/questions/{id}/
+
+    본인이 만든 질문만 보이고 수정/삭제할 수 있다 (get_queryset에서 유저로 한정).
+    """
+
+    serializer_class = QuestionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Question.objects.filter(user=self.request.user)
+        resolved = self.request.query_params.get("resolved")
+        if resolved is not None:
+            qs = qs.filter(resolved=resolved.lower() == "true")
+        return qs

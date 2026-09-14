@@ -83,3 +83,43 @@ export const reviewApi = {
 export const termApi = {
   getDetail: (id) => get(`/terms/${id}/`),
 };
+
+// 다이제스트별 내 생각 / 추가 질문
+export const noteApi = {
+  getInsight: (digestId) => get(`/digests/${digestId}/insight/`),
+  saveInsight: async (digestId, text) => {
+    const res = await fetch(`${API_BASE}/digests/${digestId}/insight/`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) throw new Error("인사이트 저장에 실패했어요.");
+    return res.json();
+  },
+  getQuestions: (digestId) => get(`/digests/${digestId}/questions/`),
+  addQuestion: async (digestId, text) => {
+    const res = await fetch(`${API_BASE}/digests/${digestId}/questions/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) throw new Error("질문 추가에 실패했어요.");
+    return res.json();
+  },
+  toggleQuestion: async (questionId, resolved) => {
+    const res = await fetch(`${API_BASE}/questions/${questionId}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ resolved }),
+    });
+    if (!res.ok) throw new Error("질문 상태 변경에 실패했어요.");
+    return res.json();
+  },
+  deleteQuestion: async (questionId) => {
+    const res = await fetch(`${API_BASE}/questions/${questionId}/`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error("질문 삭제에 실패했어요.");
+  },
+};
