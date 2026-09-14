@@ -1,15 +1,28 @@
+:root {
+  --accent: #0f8f82;        /* 절제된 청록 — 포인트 컬러는 이거 하나만 */
+  --accent-soft: #e4f3f1;
+  --ink: #17191d;
+  --muted: #7a7f87;
+  --bg: #fafafa;
+  --card-bg: #ffffff;
+  --border: #eef0f2;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --shadow-card: 0 2px 14px rgba(20, 20, 20, 0.06);
+}
+
 .app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  max-width: 480px; /* 모바일 폭 기준. 데스크톱에서도 폰처럼 보이게 */
+  max-width: 480px;
   margin: 0 auto;
-  background: #fff;
+  background: var(--bg);
 }
 
 .main-content {
   flex: 1;
-  padding: 20px 16px 90px; /* 하단 네비 높이만큼 여백 */
+  padding: 20px 16px 90px;
   overflow-y: auto;
 }
 
@@ -22,7 +35,7 @@
   width: 100%;
   max-width: 480px;
   display: flex;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border);
   background: #fff;
   padding: 10px 0 max(10px, env(safe-area-inset-bottom));
 }
@@ -31,19 +44,19 @@
   flex: 1;
   text-align: center;
   font-size: 13px;
-  color: #999;
+  color: var(--muted);
   padding: 6px 0;
 }
 
 .nav-item.active {
-  color: #1a1a1a;
-  font-weight: 600;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 /* --- 공통 --- */
 .status-message {
   text-align: center;
-  color: #999;
+  color: var(--muted);
   margin-top: 60px;
 }
 
@@ -54,17 +67,20 @@
 h1 {
   font-size: 22px;
   margin: 0 0 4px;
+  color: var(--ink);
 }
 
 h2 {
-  font-size: 15px;
-  color: #666;
+  font-size: 14px;
+  color: var(--muted);
   margin: 24px 0 10px;
+  font-weight: 600;
 }
 
 h3 {
   font-size: 16px;
   margin: 6px 0;
+  color: var(--ink);
 }
 
 .feed-header {
@@ -72,46 +88,60 @@ h3 {
 }
 
 .feed-subject {
-  color: #999;
+  color: var(--muted);
   font-size: 13px;
   margin: 0;
 }
 
 .card {
   display: block;
-  background: #f7f7f7;
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px;
+  margin-bottom: 12px;
 }
 
 .card p {
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   margin: 4px 0;
-  color: #333;
+  color: #3a3d42;
 }
 
 .card .insight {
-  color: #555;
+  color: var(--muted);
   font-style: italic;
 }
 
-.badge {
+/* --- 알약(pill) 배지: 카테고리, 진행률 등에 공통 사용 --- */
+.pill, .badge {
   display: inline-block;
   font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background: #e8e8e8;
-  color: #555;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #f0f1f3;
+  color: var(--muted);
   margin-bottom: 6px;
 }
 
-.badge.small {
+.badge.small, .pill.small {
   font-size: 10px;
-  padding: 1px 7px;
+  padding: 2px 9px;
   margin-left: 6px;
   margin-bottom: 0;
+}
+
+.pill-neutral {
+  background: #f0f1f3;
+  color: var(--muted);
+}
+
+.pill-accent {
+  background: var(--accent);
+  color: #fff;
 }
 
 .links {
@@ -120,7 +150,8 @@ h3 {
 
 .links a {
   font-size: 13px;
-  color: #2c6ecb;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* --- 타임라인 --- */
@@ -131,13 +162,14 @@ h3 {
 }
 
 .timeline-date {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
+  color: var(--ink);
 }
 
 .timeline-meta {
   font-size: 12px;
-  color: #777;
+  color: var(--muted);
   display: flex;
   align-items: center;
 }
@@ -145,11 +177,12 @@ h3 {
 /* --- 용어사전 --- */
 .search-input {
   width: 100%;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
   font-size: 14px;
   margin-bottom: 16px;
+  background: #fff;
 }
 
 .term-card-header {
@@ -160,80 +193,91 @@ h3 {
 
 .term-source {
   font-size: 12px;
-  color: #999;
+  color: #b0b3b8;
 }
 
 /* --- 복습 화면 --- */
-.review-progress {
-  text-align: center;
-  color: #999;
-  font-size: 13px;
-  margin-bottom: 12px;
+.review-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
 .flashcard {
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 16px;
-  padding: 24px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 32px 22px 26px;
   text-align: center;
 }
 
 .flashcard h2 {
-  font-size: 22px;
-  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 20px;
 }
 
 .answer-input {
   width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 11px 13px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   margin-bottom: 14px;
+  background: #fafafa;
 }
 
 .answer-preview {
   text-align: left;
   font-size: 13px;
-  color: #777;
+  color: var(--muted);
   background: #f7f7f7;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 10px;
+  padding: 9px 13px;
   margin-bottom: 10px;
 }
 
 .meaning-card {
   text-align: left;
   margin-bottom: 14px;
+  background: var(--accent-soft);
+  border: none;
+  box-shadow: none;
+}
+
+.meaning-card p {
+  color: #1c4a44;
 }
 
 .btn-primary, .btn-secondary {
   border: none;
-  border-radius: 10px;
-  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  padding: 13px 20px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   width: 100%;
 }
 
 .btn-primary {
-  background: #1a1a1a;
+  background: var(--accent);
   color: #fff;
 }
 
 .btn-secondary {
-  background: #eee;
-  color: #333;
+  background: #f0f1f3;
+  color: var(--ink);
   margin-bottom: 14px;
 }
 
 .ai-feedback {
   text-align: left;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   margin-bottom: 14px;
   font-size: 13px;
@@ -244,13 +288,13 @@ h3 {
   color: inherit;
 }
 
-.verdict-correct { background: #eafaf0; color: #1e7e42; }
-.verdict-partial { background: #fff8e5; color: #8a6d00; }
-.verdict-wrong   { background: #fdecea; color: #b93124; }
+.verdict-correct { background: #e7f6ee; color: #1e7e42; }
+.verdict-partial { background: #fdf3e0; color: #8a6d00; }
+.verdict-wrong   { background: #fbeceb; color: #b93124; }
 
 .self-grade-label {
   font-size: 12px;
-  color: #999;
+  color: var(--muted);
   margin: 4px 0 8px;
 }
 
@@ -262,14 +306,143 @@ h3 {
 .grade-btn {
   flex: 1;
   border: none;
-  border-radius: 10px;
-  padding: 12px 0;
+  border-radius: var(--radius-md);
+  padding: 13px 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   color: #fff;
 }
 
-.grade-wrong   { background: #e0574f; }
-.grade-partial { background: #e0a83f; }
-.grade-correct { background: #4caf7d; }
+.grade-wrong   { background: #d97a72; }
+.grade-partial { background: #d6a24a; }
+.grade-correct { background: var(--accent); }
+
+/* --- 클릭 가능한 카드 (용어 상세 팝업 트리거) --- */
+.card.clickable {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.card.clickable:active {
+  box-shadow: 0 1px 6px rgba(20, 20, 20, 0.08);
+}
+
+/* --- 상세 팝업 모달 --- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 20, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: none;
+  background: #f0f1f3;
+  color: var(--muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.term-detail-block {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.term-detail-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0 0 6px;
+}
+
+.term-appearance-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.term-appearance-list li {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.term-appearance-list li:last-child {
+  border-bottom: none;
+}
+
+.term-appearance-list a {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* --- 로그인 화면 --- */
+.login-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 80vh;
+  text-align: center;
+}
+
+.login-screen h1 {
+  text-align: center;
+}
+
+.login-screen .feed-subject {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- 상단 바 (로그인 후, 계정 표시 + 로그아웃) --- */
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.topbar-username {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.logout-link {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}

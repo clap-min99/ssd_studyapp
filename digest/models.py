@@ -62,7 +62,11 @@ class Term(models.Model):
     meaning = models.TextField()
     relevance = models.TextField(blank=True)
     first_seen_digest = models.ForeignKey(
-        DailyDigest, on_delete=models.SET_NULL, null=True, related_name="terms"
+        DailyDigest, on_delete=models.SET_NULL, null=True, related_name="first_seen_terms"
+    )
+    # 같은 용어가 나중에 다시 나온 모든 다이제스트를 추적 (상세 팝업의 "관련 기사" 목록용)
+    appeared_in = models.ManyToManyField(
+        DailyDigest, related_name="mentioned_terms", blank=True
     )
     # 나중에 복습 화면에서 "얼마나 익숙한지" 표시하는 용도 (지금은 기본값만)
     familiarity = models.CharField(

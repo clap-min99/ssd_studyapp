@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import TermDetail from "../components/TermDetail";
 
 const FAMILIARITY_LABEL = {
   new: "처음 봄",
@@ -12,13 +13,18 @@ export default function Glossary() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedTermId, setSelectedTermId] = useState(null);
 
   useEffect(() => {
+    let active = true;
     api
       .getTerms()
-      .then(setTerms)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .then((data) => active && setTerms(data))
+      .catch((e) => active && setError(e.message))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filtered = terms.filter(
@@ -44,18 +50,25 @@ export default function Glossary() {
         <p className="status-message">검색 결과가 없어요.</p>
       ) : (
         filtered.map((t) => (
-          <article key={t.id} className="card term-card">
+          <article
+            key={t.id}
+            className="card term-card clickable"
+            onClick={() => setSelectedTermId(t.id)}
+          >
             <div className="term-card-header">
               <h3>{t.term}</h3>
               <span className="badge small">{FAMILIARITY_LABEL[t.familiarity]}</span>
             </div>
             <p>{t.meaning}</p>
-            {t.relevance && <p className="insight">{t.relevance}</p>}
             {t.first_seen_date && (
               <p className="term-source">처음 나온 날: {t.first_seen_date}</p>
             )}
           </article>
         ))
+      )}
+
+      {selectedTermId && (
+        <TermDetail termId={selectedTermId} onClose={() => setSelectedTermId(null)} />
       )}
     </div>
   );

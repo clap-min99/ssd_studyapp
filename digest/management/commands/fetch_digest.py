@@ -105,7 +105,7 @@ class Command(BaseCommand):
 
             new_term_count = 0
             for t in parsed.terms:
-                _, term_created = Term.objects.get_or_create(
+                term_obj, term_created = Term.objects.get_or_create(
                     term=t.term,
                     defaults={
                         "meaning": t.meaning,
@@ -113,6 +113,8 @@ class Command(BaseCommand):
                         "first_seen_digest": digest_obj,
                     },
                 )
+                # 재등장이어도 이 다이제스트에 나왔다는 사실은 기록한다 (상세 팝업의 "관련 기사" 목록용)
+                term_obj.appeared_in.add(digest_obj)
                 if term_created:
                     new_term_count += 1
 

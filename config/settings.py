@@ -12,8 +12,9 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 import os
 from pathlib import Path
-from django.core.exceptions import ImproperlyConfigured
+
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()  # 로컬 개발 시 .env 파일의 DATABASE_URL 등을 읽어온다
@@ -25,7 +26,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+
 # SECURITY WARNING: keep the secret key used in production secret!
+# 하드코딩된 값을 코드에 절대 두지 않는다 — 로컬/배포 모두 .env 또는 환경변수에서만 읽어온다.
+# (로컬 개발 시 .env에 DJANGO_SECRET_KEY=아무값 을 넣어두면 됨)
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 if not SECRET_KEY:
@@ -34,9 +39,6 @@ if not SECRET_KEY:
         "로컬 개발 시에는 .env 파일에, 배포 시에는 Render 환경변수에 추가하세요.\n"
         "새 값 생성: python -c \"import secrets; print(secrets.token_urlsafe(50))\""
     )
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 # Render 등에 배포하면 DJANGO_ALLOWED_HOSTS="ssd-digest-api.onrender.com" 처럼 콤마로 구분해서 넣는다
 ALLOWED_HOSTS = [
@@ -56,6 +58,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'digest',
 ]
@@ -83,6 +86,21 @@ CORS_ALLOWED_ORIGINS = [
     for o in os.environ.get('CORS_EXTRA_ORIGINS', '').split(',')
     if o.strip()
 ]
+
+# 읽기 전용 공개 API이므로 인증까지는 필요 없지만, 과도한 요청(스크래핑/DoS성)은 제한한다
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/min',
+        'user': '300/min',
+    },
+}
 
 TEMPLATES = [
     {
@@ -169,3 +187,20 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+# --- 프로덕션 보안 설정 (DEBUG=False일 때만 적용, 로컬 개발엔 영향 없음) ---
+if not DEBUG:
+    # Render는 프록시 뒤에서 앱을 돌리므로, 이 헤더로 원래 요청이 HTTPS였는지 판단한다
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 7  # 1주. 안정화되면 1년(31536000)으로 늘려도 됨
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # ALLOWED_HOSTS와 동일한 출처를 CSRF 신뢰 목록에도 등록 (admin 로그인 등에 필요)
+    CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS]

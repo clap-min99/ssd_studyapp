@@ -15,6 +15,14 @@ class LearningItemSerializer(serializers.ModelSerializer):
         fields = ["id", "heading", "body"]
 
 
+class DigestSummarySerializer(serializers.ModelSerializer):
+    """다른 시리얼라이저 안에 중첩해서 쓰는 가벼운 다이제스트 요약 (id/날짜/제목만)."""
+
+    class Meta:
+        model = DailyDigest
+        fields = ["id", "date", "subject"]
+
+
 class TermSerializer(serializers.ModelSerializer):
     first_seen_date = serializers.DateField(
         source="first_seen_digest.date", read_only=True
@@ -30,6 +38,16 @@ class TermSerializer(serializers.ModelSerializer):
             "familiarity",
             "first_seen_date",
         ]
+
+
+class TermDetailSerializer(TermSerializer):
+    """용어 카드 클릭 시 뜨는 상세 팝업용 — 이 용어가 언급된 모든 다이제스트 목록 포함."""
+
+    appeared_in = DigestSummarySerializer(many=True, read_only=True)
+
+    class Meta(TermSerializer.Meta):
+        fields = TermSerializer.Meta.fields + ["appeared_in"]
+
 
 class TermFamiliarityUpdateSerializer(serializers.ModelSerializer):
     """자기 채점 결과 반영 전용 — familiarity 외에는 이 경로로 수정 불가하게 제한한다."""
@@ -58,7 +76,7 @@ class DailyDigestDetailSerializer(serializers.ModelSerializer):
 
     articles = ArticleSerializer(many=True, read_only=True)
     learning_items = LearningItemSerializer(many=True, read_only=True)
-    terms = TermSerializer(many=True, read_only=True)
+    terms = TermSerializer(many=True, read_only=True, source="first_seen_terms")
 
     class Meta:
         model = DailyDigest

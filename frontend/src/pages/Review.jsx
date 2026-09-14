@@ -19,11 +19,25 @@ export default function Review() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // StrictMode(개발모드)에서 effect가 두 번 실행되면서 첫 번째 shuffle 결과가
+    // 잠깐 보였다가 두 번째로 바뀌는 현상을 막기 위한 가드
+    let active = true;
+
     api
       .getTerms()
-      .then((data) => setTerms(shuffle(data)))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (active) setTerms(shuffle(data));
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const current = terms[index];
@@ -87,7 +101,10 @@ export default function Review() {
 
   return (
     <div className="review">
-      <div className="review-progress">{index + 1} / {terms.length}</div>
+      <div className="review-topbar">
+        <span className="pill pill-neutral">전체 {terms.length}개</span>
+        <span className="pill pill-accent">{index + 1} / {terms.length}</span>
+      </div>
 
       <div className="flashcard">
         <h2>{current.term}</h2>
