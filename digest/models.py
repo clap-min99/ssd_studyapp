@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class DailyDigest(models.Model):
@@ -68,16 +70,6 @@ class Term(models.Model):
     appeared_in = models.ManyToManyField(
         DailyDigest, related_name="mentioned_terms", blank=True
     )
-    # 나중에 복습 화면에서 "얼마나 익숙한지" 표시하는 용도 (지금은 기본값만)
-    familiarity = models.CharField(
-        max_length=20,
-        choices=[
-            ("new", "처음 봄"),
-            ("familiar", "익숙함"),
-            ("mastered", "설명 가능"),
-        ],
-        default="new",
-    )
 
     class Meta:
         ordering = ["term"]
@@ -85,3 +77,56 @@ class Term(models.Model):
 
     def __str__(self) -> str:
         return self.term
+
+
+class ReviewRecord(models.Model):
+    """유저 한 명이 용어 하나를 복습한 상태. 간격 반복(spaced repetition)의 핵심 모델.
+
+    familiarity는 더 이상 Term에 붙지 않는다 — 같은 용어라도 사람마다 익숙한 정도가
+    다르기 때문에, "누가·어떤 용어를·다음에 언제 복습해야 하는지"를 여기서 따로 관리한다.
+    """
+
+    FAMILIARITY_CHOICES = [
+        ("new", "몰랐음"),
+        ("familiar", "애매함"),
+        ("mastered", "알았음"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="review_records"
+    )
+    term = models.ForeignKey(
+        Term, on_delete=models.CASCADE, related_name="review_records"
+    )
+    familiarity = models.CharField(
+        max_length=20, choices=FAMILIARITY_CHOICES, default="new"
+    )
+    interval_days = models.PositiveIntegerField(default=1)
+    next_review_date = models.DateField()
+    last_reviewed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["user", "term"]
+        ordering = ["next_review_date"]
+
+    def __str__(self) -> str:
+        return f"{self.user} · {self.term} · 다음 복습 {self.next_review_date}"
+
+    def apply_answer(self, familiarity: str) -> None:
+        """자기 채점 결과를 반영해서 다음 간격을 계산한다 (단순 배수 방식).
+
+        - 몰랐음  -> 내일 다시 (간격 1일로 리셋)
+        - 애매함  -> 2일 뒤 (간격 2일로 리셋)
+        - 알았음  -> 기존 간격을 2배로 늘림 (최소 2일)
+        """
+        if familiarity == "new":
+            self.interval_days = 1
+        elif familiarity == "familiar":
+            self.interval_days = 2
+        elif familiarity == "mastered":
+            self.interval_days = max(self.interval_days * 2, 2)
+
+        self.familiarity = familiarity
+        self.next_review_date = timezone.localdate() + timezone.timedelta(
+            days=self.interval_days
+        )

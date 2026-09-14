@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Article, DailyDigest, LearningItem, Term
+from .models import Article, DailyDigest, LearningItem, ReviewRecord, Term
 
 
 class ArticleInline(admin.TabularInline):
@@ -41,6 +41,12 @@ class LearningItemAdmin(admin.ModelAdmin):
 
 @admin.register(Term)
 class TermAdmin(admin.ModelAdmin):
-    list_display = ["term", "familiarity", "first_seen_digest"]
-    list_filter = ["familiarity"]
+    list_display = ["term", "first_seen_digest"]
     search_fields = ["term", "meaning"]
+
+
+@admin.register(ReviewRecord)
+class ReviewRecordAdmin(admin.ModelAdmin):
+    list_display = ["user", "term", "familiarity", "next_review_date", "interval_days"]
+    list_filter = ["familiarity", "user"]
+    search_fields = ["term__term"]

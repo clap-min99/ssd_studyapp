@@ -1,12 +1,8 @@
-import { useState } from "react";
 import { CATEGORY_LABEL } from "../api/client";
-import TermDetail from "../components/TermDetail";
 
 /** 다이제스트 상세 데이터를 받아서 렌더링하는 공용 컴포넌트.
  *  TodayFeed(최신 1건)와 DigestDetail(타임라인에서 클릭한 특정 날짜)이 공유한다. */
 export default function DigestView({ digest }) {
-  const [selectedTermId, setSelectedTermId] = useState(null);
-
   return (
     <div className="feed">
       <header className="feed-header">
@@ -53,20 +49,13 @@ export default function DigestView({ digest }) {
         <section>
           <h2>새로운 용어</h2>
           {digest.terms.map((t) => (
-            <article
-              key={t.id}
-              className="card term-card clickable"
-              onClick={() => setSelectedTermId(t.id)}
-            >
+            <article key={t.id} className="card term-card">
               <h3>{t.term}</h3>
               <p>{t.meaning}</p>
+              {t.relevance && <p className="insight">{t.relevance}</p>}
             </article>
           ))}
         </section>
-      )}
-
-      {selectedTermId && (
-        <TermDetail termId={selectedTermId} onClose={() => setSelectedTermId(null)} />
       )}
     </div>
   );

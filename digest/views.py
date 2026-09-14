@@ -1,17 +1,20 @@
+from django.contrib.auth import authenticate
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import mixins, viewsets
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
 
-from .models import DailyDigest, Term
+from .models import DailyDigest, ReviewRecord, Term
 from .serializers import (
     DailyDigestDetailSerializer,
     DailyDigestListSerializer,
+    DueTermSerializer,
+    ReviewAnswerSerializer,
     TermDetailSerializer,
-    TermFamiliarityUpdateSerializer,
     TermSerializer,
 )
 
@@ -65,35 +68,30 @@ class DailyDigestViewSet(viewsets.ReadOnlyModelViewSet):
 class TermViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,   # 자기 채점(familiarity 수정)을 위해 PATCH 허용. 생성/삭제는 막아둔다.
     viewsets.GenericViewSet,
 ):
     """
-    GET   /api/terms/                      -> 전체 용어 사전
-    GET   /api/terms/?familiarity=new      -> 익숙도로 필터링
-    PATCH /api/terms/{id}/                 -> 자기 채점 결과 반영 (familiarity 변경) — 로그인 필요
-    POST  /api/terms/{id}/check_answer/    -> 서술형 답변을 Gemini로 첨삭 — 로그인 필요
+    GET /api/terms/                -> 전체 용어 사전 (로그인 시 my_familiarity 포함)
+    GET /api/terms/{id}/           -> 상세 (관련 기사 목록 포함)
+    POST /api/terms/{id}/check_answer/  -> 서술형 답변을 Gemini로 첨삭 — 로그인 필요
+
+    자기 채점(familiarity)은 이제 여기가 아니라 /api/review/ 쪽에서 처리한다
+    (유저별로 기록해야 해서 Term 자체를 수정하는 방식이 더 이상 맞지 않는다).
     """
 
     queryset = Term.objects.all()
     serializer_class = TermSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]  # GET은 누구나, 나머지는 로그인 필요
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_serializer_class(self):
-        if self.action in ("update", "partial_update"):
-            return TermFamiliarityUpdateSerializer
         if self.action == "retrieve":
             return TermDetailSerializer
         return TermSerializer
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        familiarity = self.request.query_params.get("familiarity")
-        if familiarity:
-            qs = qs.filter(familiarity=familiarity)
-        return qs
+    def get_serializer_context(self):
+        return {"request": self.request}
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def check_answer(self, request, pk=None):
         term = self.get_object()
         user_answer = request.data.get("answer", "").strip()
@@ -117,3 +115,67 @@ class TermViewSet(
             )
 
         return Response(result)
+
+
+class DueReviewsView(APIView):
+    """
+    GET /api/review/due/ -> 로그인한 사용자가 오늘 복습해야 할 용어 목록
+
+    "오늘 복습할 것"의 기준:
+      - 한 번도 복습 기록이 없는 용어 (처음 보는 것) — 바로 대상
+      - 기록이 있지만 next_review_date가 오늘 이하로 지난 것
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        today = timezone.localdate()
+
+        reviewed = {
+            r.term_id: r
+            for r in ReviewRecord.objects.filter(user=request.user)
+        }
+
+        due_terms = [
+            term
+            for term in Term.objects.all()
+            if term.id not in reviewed or reviewed[term.id].next_review_date <= today
+        ]
+
+        serializer = DueTermSerializer(due_terms, many=True)
+        return Response(serializer.data)
+
+
+class SubmitReviewAnswerView(APIView):
+    """
+    POST /api/review/{term_id}/answer/  { "familiarity": "new" | "familiar" | "mastered" }
+
+    자기 채점 결과를 반영해서 이 사용자의 ReviewRecord를 갱신하고,
+    간격 반복 규칙에 따라 다음 복습일을 계산해서 돌려준다.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, term_id):
+        term = get_object_or_404(Term, id=term_id)
+
+        serializer = ReviewAnswerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        familiarity = serializer.validated_data["familiarity"]
+
+        record, _ = ReviewRecord.objects.get_or_create(
+            user=request.user,
+            term=term,
+            defaults={"next_review_date": timezone.localdate()},
+        )
+        record.apply_answer(familiarity)
+        record.save()
+
+        return Response(
+            {
+                "term_id": term.id,
+                "familiarity": record.familiarity,
+                "interval_days": record.interval_days,
+                "next_review_date": record.next_review_date,
+            }
+        )

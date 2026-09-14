@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Article, DailyDigest, LearningItem, Term
+from .models import Article, DailyDigest, LearningItem, ReviewRecord, Term
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -24,9 +24,16 @@ class DigestSummarySerializer(serializers.ModelSerializer):
 
 
 class TermSerializer(serializers.ModelSerializer):
+    """용어 사전 기본형. my_familiarity는 로그인한 사용자 기준 '내 복습 상태'다.
+
+    Term 자체엔 더 이상 familiarity가 없다(사람마다 다르므로) — 로그인 상태면
+    요청한 사용자의 ReviewRecord를 찾아서 붙여주고, 비로그인이면 null.
+    """
+
     first_seen_date = serializers.DateField(
         source="first_seen_digest.date", read_only=True
     )
+    my_familiarity = serializers.SerializerMethodField()
 
     class Meta:
         model = Term
@@ -35,9 +42,16 @@ class TermSerializer(serializers.ModelSerializer):
             "term",
             "meaning",
             "relevance",
-            "familiarity",
             "first_seen_date",
+            "my_familiarity",
         ]
+
+    def get_my_familiarity(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        record = obj.review_records.filter(user=request.user).first()
+        return record.familiarity if record else "new"
 
 
 class TermDetailSerializer(TermSerializer):
@@ -47,14 +61,6 @@ class TermDetailSerializer(TermSerializer):
 
     class Meta(TermSerializer.Meta):
         fields = TermSerializer.Meta.fields + ["appeared_in"]
-
-
-class TermFamiliarityUpdateSerializer(serializers.ModelSerializer):
-    """자기 채점 결과 반영 전용 — familiarity 외에는 이 경로로 수정 불가하게 제한한다."""
-
-    class Meta:
-        model = Term
-        fields = ["id", "familiarity"]
 
 
 class DailyDigestListSerializer(serializers.ModelSerializer):
@@ -88,3 +94,17 @@ class DailyDigestDetailSerializer(serializers.ModelSerializer):
             "learning_items",
             "terms",
         ]
+
+
+class DueTermSerializer(serializers.ModelSerializer):
+    """오늘 복습할 카드 목록용 — 복습에 필요한 정보만 가볍게."""
+
+    class Meta:
+        model = Term
+        fields = ["id", "term", "meaning", "relevance"]
+
+
+class ReviewAnswerSerializer(serializers.Serializer):
+    familiarity = serializers.ChoiceField(
+        choices=[c[0] for c in ReviewRecord.FAMILIARITY_CHOICES]
+    )

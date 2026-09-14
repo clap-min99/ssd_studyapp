@@ -3,7 +3,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import TodayFeed from "./pages/TodayFeed";
 import Timeline from "./pages/Timeline";
 import DigestDetail from "./pages/DigestDetail";
-import Glossary from "./pages/Glossary";
+import Glossary from "./components/Glossary";
 import Review from "./pages/Review";
 import Login from "./pages/Login";
 import { auth } from "./api/client";

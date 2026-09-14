@@ -45,8 +45,7 @@ export const api = {
   getLatestDigest: () => get("/digests/latest/"),
   getDigestList: () => get("/digests/"),
   getDigestDetail: (id) => get(`/digests/${id}/`),
-  getTerms: (familiarity) =>
-    get(`/terms/${familiarity ? `?familiarity=${familiarity}` : ""}`),
+  getTerms: () => get("/terms/"),
 };
 
 export const CATEGORY_LABEL = {
@@ -54,11 +53,12 @@ export const CATEGORY_LABEL = {
   automotive: "자동차 SW",
 };
 
-// 복습 화면용 추가 API
+// 복습 화면용 API — 간격 반복(spaced repetition)
 export const reviewApi = {
-  updateFamiliarity: async (termId, familiarity) => {
-    const res = await fetch(`${API_BASE}/terms/${termId}/`, {
-      method: "PATCH",
+  getDue: () => get("/review/due/"),
+  submitAnswer: async (termId, familiarity) => {
+    const res = await fetch(`${API_BASE}/review/${termId}/answer/`, {
+      method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ familiarity }),
     });
