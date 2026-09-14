@@ -6,6 +6,7 @@ from .views import (
     DueReviewsView,
     LoginView,
     QuestionViewSet,
+    StreakView,
     SubmitReviewAnswerView,
     TermViewSet,
 )
@@ -18,5 +19,6 @@ router.register("questions", QuestionViewSet, basename="question")
 urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
     path("review/due/", DueReviewsView.as_view(), name="review-due"),
+    path("review/streak/", StreakView.as_view(), name="review-streak"),
     path("review/<int:term_id>/answer/", SubmitReviewAnswerView.as_view(), name="review-answer"),
 ] + router.urls

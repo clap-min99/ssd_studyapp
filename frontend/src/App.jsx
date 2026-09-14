@@ -3,9 +3,10 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import TodayFeed from "./pages/TodayFeed";
 import Timeline from "./pages/Timeline";
 import DigestDetail from "./pages/DigestDetail";
-import Glossary from "./components/Glossary";
+import Glossary from "./pages/Glossary";
 import Review from "./pages/Review";
 import Login from "./pages/Login";
+import StreakBadge from "./components/StreakBadge";
 import { auth } from "./api/client";
 import "./App.css";
 
@@ -31,10 +32,13 @@ export default function App() {
     <div className="app">
       <main className="main-content">
         <div className="topbar">
-          <span className="topbar-username">{auth.getUsername()}</span>
-          <button className="logout-link" onClick={handleLogout}>
-            로그아웃
-          </button>
+          <StreakBadge />
+          <div className="topbar-right">
+            <span className="topbar-username">{auth.getUsername()}</span>
+            <button className="logout-link" onClick={handleLogout}>
+              로그아웃
+            </button>
+          </div>
         </div>
 
         <Routes>
@@ -48,15 +52,19 @@ export default function App() {
 
       <nav className="bottom-nav">
         <NavLink to="/" end className="nav-item">
+          <span className="nav-icon">📰</span>
           오늘
         </NavLink>
         <NavLink to="/timeline" className="nav-item">
+          <span className="nav-icon">🗂️</span>
           타임라인
         </NavLink>
         <NavLink to="/glossary" className="nav-item">
+          <span className="nav-icon">📖</span>
           용어사전
         </NavLink>
         <NavLink to="/review" className="nav-item">
+          <span className="nav-icon">🔁</span>
           복습
         </NavLink>
       </nav>

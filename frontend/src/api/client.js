@@ -53,9 +53,15 @@ export const CATEGORY_LABEL = {
   automotive: "자동차 SW",
 };
 
+export const CATEGORY_BADGE_CLASS = {
+  ssd: "badge-ssd",
+  automotive: "badge-automotive",
+};
+
 // 복습 화면용 API — 간격 반복(spaced repetition)
 export const reviewApi = {
   getDue: () => get("/review/due/"),
+  getStreak: () => get("/review/streak/"),
   submitAnswer: async (termId, familiarity) => {
     const res = await fetch(`${API_BASE}/review/${termId}/answer/`, {
       method: "POST",

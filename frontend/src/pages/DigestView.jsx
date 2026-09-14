@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CATEGORY_LABEL } from "../api/client";
+import { CATEGORY_BADGE_CLASS, CATEGORY_LABEL } from "../api/client";
 import TermDetail from "../components/TermDetail";
 import DigestNotes from "../components/DigestNotes";
 
@@ -20,7 +20,9 @@ export default function DigestView({ digest }) {
           <h2>기사</h2>
           {digest.articles.map((a) => (
             <article key={a.id} className="card">
-              <span className="badge">{CATEGORY_LABEL[a.category] ?? a.category}</span>
+              <span className={`badge ${CATEGORY_BADGE_CLASS[a.category] ?? ""}`}>
+                {CATEGORY_LABEL[a.category] ?? a.category}
+              </span>
               <h3>{a.title}</h3>
               {a.summary && <p>{a.summary}</p>}
               {a.insight && <p className="insight">💡 {a.insight}</p>}

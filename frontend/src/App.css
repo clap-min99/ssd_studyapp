@@ -43,9 +43,23 @@
 .nav-item {
   flex: 1;
   text-align: center;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--muted);
   padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.nav-icon {
+  font-size: 19px;
+  line-height: 1;
+  filter: grayscale(1) opacity(0.6);
+}
+
+.nav-item.active .nav-icon {
+  filter: none;
 }
 
 .nav-item.active {
@@ -142,6 +156,17 @@ h3 {
 .pill-accent {
   background: var(--accent);
   color: #fff;
+}
+
+/* 카테고리별 배지 색 (한눈에 SSD/자동차 SW 구분되게) */
+.badge-ssd {
+  background: #e4f0fb;
+  color: #1c5b96;
+}
+
+.badge-automotive {
+  background: #f4ecfb;
+  color: #6b3fa0;
 }
 
 .links {
@@ -426,10 +451,25 @@ h3 {
 /* --- 상단 바 (로그인 후, 계정 표시 + 로그아웃) --- */
 .topbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: 10px;
   margin-bottom: 14px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.streak-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #b3591f;
+  background: #fdf1e7;
+  padding: 4px 10px;
+  border-radius: 999px;
 }
 
 .topbar-username {

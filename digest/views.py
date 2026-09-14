@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticate
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import DailyDigest, Insight, Question, ReviewRecord, Term
+from .models import DailyActivity, DailyDigest, Insight, Question, ReviewRecord, Term
 from .serializers import (
     DailyDigestDetailSerializer,
     DailyDigestListSerializer,
@@ -209,6 +209,9 @@ class SubmitReviewAnswerView(APIView):
         record.apply_answer(familiarity)
         record.save()
 
+        # 스트릭 계산용 — 오늘 활동했다는 사실을 기록 (이미 있으면 중복 생성 안 함)
+        DailyActivity.objects.get_or_create(user=request.user, date=timezone.localdate())
+
         return Response(
             {
                 "term_id": term.id,
@@ -243,3 +246,30 @@ class QuestionViewSet(
         if resolved is not None:
             qs = qs.filter(resolved=resolved.lower() == "true")
         return qs
+
+
+class StreakView(APIView):
+    """
+    GET /api/review/streak/ -> { "current_streak": N, "active_today": true/false }
+
+    "오늘 아직 안 했어도 어제까지 이어져 있으면 스트릭은 안 끊긴 걸로 표시"하는
+    일반적인 스트릭 앱 관례를 따른다 (오늘 활동 안 했다고 바로 0으로 보여주면
+    앱을 열자마자 스트릭이 깨진 것처럼 보여서 김빠짐).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        active_dates = set(
+            DailyActivity.objects.filter(user=request.user).values_list("date", flat=True)
+        )
+        today = timezone.localdate()
+        active_today = today in active_dates
+
+        cursor = today if active_today else today - timezone.timedelta(days=1)
+        streak = 0
+        while cursor in active_dates:
+            streak += 1
+            cursor -= timezone.timedelta(days=1)
+
+        return Response({"current_streak": streak, "active_today": active_today})

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, CATEGORY_LABEL } from "../api/client";
+import { api, CATEGORY_BADGE_CLASS, CATEGORY_LABEL } from "../api/client";
 
 export default function Timeline() {
   const [digests, setDigests] = useState([]);
@@ -28,7 +28,7 @@ export default function Timeline() {
           <div className="timeline-meta">
             <span>{d.article_count}건의 기사</span>
             {d.categories.map((c) => (
-              <span key={c} className="badge small">
+              <span key={c} className={`badge small ${CATEGORY_BADGE_CLASS[c] ?? ""}`}>
                 {CATEGORY_LABEL[c] ?? c}
               </span>
             ))}

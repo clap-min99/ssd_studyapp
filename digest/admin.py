@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Article, DailyDigest, Insight, LearningItem, Question, ReviewRecord, Term
+from .models import Article, DailyActivity, DailyDigest, Insight, LearningItem, Question, ReviewRecord, Term
 
 
 class ArticleInline(admin.TabularInline):
@@ -63,3 +63,9 @@ class QuestionAdmin(admin.ModelAdmin):
     list_display = ["user", "digest", "resolved", "created_at"]
     list_filter = ["resolved", "user"]
     search_fields = ["text"]
+
+
+@admin.register(DailyActivity)
+class DailyActivityAdmin(admin.ModelAdmin):
+    list_display = ["user", "date"]
+    list_filter = ["user"]

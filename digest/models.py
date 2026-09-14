@@ -169,3 +169,23 @@ class Question(models.Model):
 
     def __str__(self) -> str:
         return self.text[:50]
+
+
+class DailyActivity(models.Model):
+    """유저가 그 날 복습 활동을 했다는 기록 (날짜 하나당 하나). 스트릭 계산용.
+
+    ReviewRecord는 용어별 '최신 상태'만 남기 때문에 "언제 활동했는지" 역사를
+    따로 못 구한다 — 그래서 이 모델로 날짜 단위 활동 로그를 별도로 쌓는다.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="daily_activities"
+    )
+    date = models.DateField()
+
+    class Meta:
+        unique_together = ["user", "date"]
+        ordering = ["-date"]
+
+    def __str__(self) -> str:
+        return f"{self.user} · {self.date}"
