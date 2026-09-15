@@ -2,8 +2,7 @@ name: Fetch Daily Digest
 
 on:
   schedule:
-    # 매일 07:15 KST = 전날 22:15 UTC (KST는 UTC+9)
-    - cron: "15 22 * * *"
+  - cron: "*/15 22-23 * * *"   # KST 07:00~08:45, 15분마다 시도
   workflow_dispatch: {}   # 手動으로도 실행 가능하게 (Actions 탭에서 Run workflow 버튼)
 
 jobs:
