@@ -108,8 +108,8 @@ class Command(BaseCommand):
                 term_obj, term_created = Term.objects.get_or_create(
                     term=t.term,
                     defaults={
-                        "meaning": t.meaning,
-                        "relevance": t.relevance,
+                        "meaning": t.meaning or "",
+                        "relevance": t.relevance or "",
                         "first_seen_digest": digest_obj,
                     },
                 )
