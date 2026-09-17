@@ -102,6 +102,23 @@ def _get_client() -> genai.Client:
     return genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 
+def _none_to_empty(d: dict) -> dict:
+    """Gemini가 선택 필드에 값 대신 null을 줄 때가 있어서, None을 정리한다.
+    (DB의 TextField는 NULL을 허용하지 않는데, dataclass 기본값 ""는 명시적 None이
+    들어오면 무시되고 그대로 None이 통과해버리는 문제가 있었다.)
+    "links"만 리스트 필드라 None이면 빈 리스트로, 나머지는 빈 문자열로 채운다.
+    """
+    cleaned = {}
+    for k, v in d.items():
+        if v is not None:
+            cleaned[k] = v
+        elif k == "links":
+            cleaned[k] = []
+        else:
+            cleaned[k] = ""
+    return cleaned
+
+
 def parse_digest_with_gemini(raw_text: str) -> ParsedDigest:
     """다이제스트 원문을 Gemini API로 구조화한다."""
 
@@ -130,9 +147,9 @@ def parse_digest_with_gemini(raw_text: str) -> ParsedDigest:
 
     return ParsedDigest(
         date=data.get("date"),
-        articles=[Article(**a) for a in data.get("articles", [])],
-        learning_items=[LearningItem(**li) for li in data.get("learning_items", [])],
-        terms=[Term(**t) for t in data.get("terms", [])],
+        articles=[Article(**_none_to_empty(a)) for a in data.get("articles", [])],
+        learning_items=[LearningItem(**_none_to_empty(li)) for li in data.get("learning_items", [])],
+        terms=[Term(**_none_to_empty(t)) for t in data.get("terms", [])],
         no_article_categories=data.get("no_article_categories", []),
     )
 
