@@ -99,11 +99,14 @@ class Command(BaseCommand):
                     article_obj.tags.set(Tag.objects.filter(slug__in=a.tags))
 
             for li in parsed.learning_items:
-                LearningItem.objects.create(
+                li_obj = LearningItem.objects.create(
                     digest=digest_obj,
                     heading=li.heading,
                     body=li.body,
                 )
+                if li.tags:
+                    li_obj.tags.set(Tag.objects.filter(slug__in=li.tags))
+                
 
             new_term_count = 0
             for t in parsed.terms:

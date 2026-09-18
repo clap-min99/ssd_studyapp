@@ -8,9 +8,11 @@ from .views import (
     QuestionViewSet,
     StreakView,
     SubmitReviewAnswerView,
-    TagArticlesView,      # 추가
-    TagListView,           # 추가
+    LearningItemListView,
+    TagArticlesView,     
+    TagListView,          
     TermViewSet,
+    TagLearningItemsView,
 )
 
 router = DefaultRouter()
@@ -24,5 +26,7 @@ urlpatterns = [
     path("review/streak/", StreakView.as_view(), name="review-streak"),
     path("review/<int:term_id>/answer/", SubmitReviewAnswerView.as_view(), name="review-answer"),
     path("tags/", TagListView.as_view(), name="tag-list"),                              # 추가
-    path("tags/<slug:slug>/articles/", TagArticlesView.as_view(), name="tag-articles"),  # 추가
+    path("tags/<slug:slug>/articles/", TagArticlesView.as_view(), name="tag-articles"),
+    path("learning-items/", LearningItemListView.as_view(), name="learning-item-list"),# 추가
+    path("tags/<slug:slug>/learning-items/", TagLearningItemsView.as_view(), name="tag-learning-items"),
 ] + router.urls

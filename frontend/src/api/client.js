@@ -48,6 +48,8 @@ export const api = {
   getTerms: () => get("/terms/"),
   getTags: () => get("/tags/"),
   getTagArticles: (slug) => get(`/tags/${slug}/articles/`),
+  getLearningItems: () => get("/learning-items/"),
+  getTagLearningItems: (slug) => get(`/tags/${slug}/learning-items/`),
 };
 
 export const CATEGORY_LABEL = {

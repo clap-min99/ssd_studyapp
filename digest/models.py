@@ -50,6 +50,7 @@ class LearningItem(models.Model):
     )
     heading = models.CharField(max_length=300)
     body = models.TextField()
+    tags = models.ManyToManyField("Tag", blank=True)
 
     class Meta:
         ordering = ["digest__date"]

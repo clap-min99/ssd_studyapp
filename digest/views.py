@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticate
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import DailyActivity, DailyDigest, Insight, Question, ReviewRecord, Term, Tag, Article
+from .models import DailyActivity, DailyDigest, Insight, Question, ReviewRecord, Term, Tag, Article, LearningItem
 from .serializers import (
     DailyDigestDetailSerializer,
     DailyDigestListSerializer,
@@ -19,7 +19,8 @@ from .serializers import (
     TermDetailSerializer,
     TermSerializer,
     TagSerializer,
-    ArticleSerializer
+    ArticleSerializer,
+    LearningItemSerializer
 )
 
 
@@ -286,3 +287,14 @@ class TagArticlesView(generics.ListAPIView):
     permission_classes = [AllowAny]
     def get_queryset(self):
         return Article.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date')
+
+class TagLearningItemsView(generics.ListAPIView):
+    serializer_class = LearningItemSerializer
+    permission_classes = [AllowAny]
+    def get_queryset(self):
+        return LearningItem.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date')
+
+class LearningItemListView(generics.ListAPIView):
+    queryset = LearningItem.objects.all().order_by('-digest__date')
+    serializer_class = LearningItemSerializer
+    permission_classes = [AllowAny]

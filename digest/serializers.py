@@ -129,3 +129,9 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ['slug', 'name', 'description', 'category']
+        
+class LearningItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LearningItem
+        fields = ['id', 'heading', 'body']
+        

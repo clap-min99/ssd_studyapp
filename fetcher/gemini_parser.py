@@ -54,8 +54,8 @@ SYSTEM_PROMPT = """\
     }
   ],
   "no_article_categories": ["ssd", "automotive"],
-  "learning_items": [
-    {"heading": "소제목", "body": "본문 내용 요약"}
+    "learning_items": [
+    {"heading": "소제목", "body": "본문 내용 요약", "tags": ["slug1", "slug2"]}
   ],
   "terms": [
     {"term": "용어", "meaning": "의미", "relevance": "펌웨어/개발과의 관련성 (있으면)"}
@@ -89,7 +89,7 @@ class Article:
 class LearningItem:
     heading: str
     body: str
-
+    tags: list[str] = field(default_factory=list)
 
 @dataclass
 class Term:

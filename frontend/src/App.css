@@ -544,3 +544,29 @@ h3 {
   cursor: pointer;
   font: inherit;
 }
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.quiz-option {
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.quiz-correct {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.quiz-wrong {
+  border-color: #c0392b;
+  background: #fbeaea;
+}

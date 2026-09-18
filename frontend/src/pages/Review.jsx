@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { reviewApi } from "../api/client";
+import { api, reviewApi } from "../api/client";
 
 const VERDICT_LABEL = {
   correct: { text: "정확해요", className: "verdict-correct" },
@@ -17,6 +17,8 @@ function shuffle(arr) {
 }
 
 export default function Review() {
+  const [mode, setMode] = useState("written"); // "written" | "choice"
+
   const [terms, setTerms] = useState([]);
   const [totalDueAtStart, setTotalDueAtStart] = useState(null);
   const [index, setIndex] = useState(0);
@@ -27,6 +29,11 @@ export default function Review() {
   const [aiError, setAiError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // --- 객관식 모드 ---
+  const [termPool, setTermPool] = useState([]);
+  const [options, setOptions] = useState([]);
+  const [picked, setPicked] = useState(null);
 
   function loadDueTerms() {
     setLoading(true);
@@ -52,13 +59,29 @@ export default function Review() {
 
   useEffect(() => loadDueTerms(), []);
 
+  useEffect(() => {
+    if (mode === "choice" && termPool.length === 0) {
+      api.getTerms().then(setTermPool);
+    }
+  }, [mode, termPool.length]);
+
   const current = terms[index];
+
+  useEffect(() => {
+    if (mode !== "choice" || !current || termPool.length === 0) return;
+    const decoys = shuffle(termPool.filter((t) => t.id !== current.id))
+      .slice(0, 3)
+      .map((t) => t.meaning);
+    setOptions(shuffle([current.meaning, ...decoys]));
+    setPicked(null);
+  }, [mode, current, termPool]);
 
   function goNext() {
     setRevealed(false);
     setAnswer("");
     setAiResult(null);
     setAiError(null);
+    setPicked(null);
     setIndex((i) => i + 1);
   }
 
@@ -66,10 +89,20 @@ export default function Review() {
     try {
       await reviewApi.submitAnswer(current.id, familiarity);
     } catch (e) {
-      // 저장 실패해도 복습 흐름은 막지 않는다 — 다음 카드로 진행 가능하게
       console.error(e);
     }
     goNext();
+  }
+
+  async function handlePick(choice) {
+    if (picked !== null) return; // 이미 선택했으면 무시
+    setPicked(choice);
+    const familiarity = choice === current.meaning ? "familiar" : "new";
+    try {
+      await reviewApi.submitAnswer(current.id, familiarity);
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   async function handleAiCheck() {
@@ -117,60 +150,104 @@ export default function Review() {
         <span className="pill pill-accent">{index + 1} / {terms.length}</span>
       </div>
 
+      <div className="view-switcher">
+        <button
+          className={`pill pill-button ${mode === "written" ? "pill-accent" : "pill-neutral"}`}
+          onClick={() => setMode("written")}
+        >
+          서술형
+        </button>
+        <button
+          className={`pill pill-button ${mode === "choice" ? "pill-accent" : "pill-neutral"}`}
+          onClick={() => setMode("choice")}
+        >
+          객관식
+        </button>
+      </div>
+
       <div className="flashcard">
         <h2>{current.term}</h2>
 
-        {!revealed ? (
-          <>
-            <textarea
-              className="answer-input"
-              placeholder="이 용어, 내 언어로 설명해보기..."
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              rows={3}
-            />
-            <button className="btn-primary" onClick={() => setRevealed(true)}>
-              정답 확인
-            </button>
-          </>
+        {mode === "written" ? (
+          !revealed ? (
+            <>
+              <textarea
+                className="answer-input"
+                placeholder="이 용어, 내 언어로 설명해보기..."
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                rows={3}
+              />
+              <button className="btn-primary" onClick={() => setRevealed(true)}>
+                정답 확인
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="answer-preview">{answer || "(답을 안 쓰고 정답부터 봤어요)"}</p>
+
+              <div className="card meaning-card">
+                <p>{current.meaning}</p>
+                {current.relevance && <p className="insight">{current.relevance}</p>}
+              </div>
+
+              {answer.trim() && !aiResult && (
+                <button className="btn-secondary" onClick={handleAiCheck} disabled={aiLoading}>
+                  {aiLoading ? "첨삭 중..." : "AI 첨삭 받기"}
+                </button>
+              )}
+
+              {aiError && <p className="status-message error">{aiError}</p>}
+
+              {aiResult && (
+                <div className={`ai-feedback ${VERDICT_LABEL[aiResult.verdict]?.className ?? ""}`}>
+                  <strong>{VERDICT_LABEL[aiResult.verdict]?.text ?? aiResult.verdict}</strong>
+                  <p>{aiResult.feedback}</p>
+                </div>
+              )}
+
+              <div className="self-grade">
+                <p className="self-grade-label">스스로 채점하기</p>
+                <div className="self-grade-buttons">
+                  <button className="grade-btn grade-wrong" onClick={() => handleSelfGrade("new")}>몰랐음</button>
+                  <button className="grade-btn grade-partial" onClick={() => handleSelfGrade("familiar")}>애매함</button>
+                  <button className="grade-btn grade-correct" onClick={() => handleSelfGrade("mastered")}>알았음</button>
+                </div>
+              </div>
+            </>
+          )
         ) : (
           <>
-            <p className="answer-preview">{answer || "(답을 안 쓰고 정답부터 봤어요)"}</p>
-
-            <div className="card meaning-card">
-              <p>{current.meaning}</p>
-              {current.relevance && <p className="insight">{current.relevance}</p>}
-            </div>
-
-            {answer.trim() && !aiResult && (
-              <button className="btn-secondary" onClick={handleAiCheck} disabled={aiLoading}>
-                {aiLoading ? "첨삭 중..." : "AI 첨삭 받기"}
-              </button>
-            )}
-
-            {aiError && <p className="status-message error">{aiError}</p>}
-
-            {aiResult && (
-              <div className={`ai-feedback ${VERDICT_LABEL[aiResult.verdict]?.className ?? ""}`}>
-                <strong>{VERDICT_LABEL[aiResult.verdict]?.text ?? aiResult.verdict}</strong>
-                <p>{aiResult.feedback}</p>
+            {options.length === 0 ? (
+              <p className="status-message">보기 만드는 중...</p>
+            ) : (
+              <div className="quiz-options">
+                {options.map((opt) => {
+                  const isCorrect = opt === current.meaning;
+                  const isPicked = picked === opt;
+                  const showState = picked !== null;
+                  const cls = !showState
+                    ? "quiz-option"
+                    : isCorrect
+                    ? "quiz-option quiz-correct"
+                    : isPicked
+                    ? "quiz-option quiz-wrong"
+                    : "quiz-option";
+                  return (
+                    <button key={opt} className={cls} onClick={() => handlePick(opt)} disabled={showState}>
+                      {opt}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
-            <div className="self-grade">
-              <p className="self-grade-label">스스로 채점하기</p>
-              <div className="self-grade-buttons">
-                <button className="grade-btn grade-wrong" onClick={() => handleSelfGrade("new")}>
-                  몰랐음
-                </button>
-                <button className="grade-btn grade-partial" onClick={() => handleSelfGrade("familiar")}>
-                  애매함
-                </button>
-                <button className="grade-btn grade-correct" onClick={() => handleSelfGrade("mastered")}>
-                  알았음
-                </button>
-              </div>
-            </div>
+            {picked !== null && (
+              <>
+                {current.relevance && <p className="insight">{current.relevance}</p>}
+                <button className="btn-primary" onClick={goNext}>다음</button>
+              </>
+            )}
           </>
         )}
       </div>
