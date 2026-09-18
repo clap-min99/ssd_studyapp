@@ -3,7 +3,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import TodayFeed from "./pages/TodayFeed";
 import Timeline from "./pages/Timeline";
 import DigestDetail from "./pages/DigestDetail";
-import Categories from './pages/Categories';
+// import Categories from './pages/Categories';
 import Glossary from "./pages/Glossary";
 import Review from "./pages/Review";
 import Login from "./pages/Login";
@@ -69,10 +69,10 @@ export default function App() {
           <span className="nav-icon">🔁</span>
           복습
         </NavLink>
-          <NavLink to="/categories" className="nav-item">
+          {/* <NavLink to="/categories" className="nav-item">
           <span className="nav-icon">🏷️</span>
           카테고리
-        </NavLink>
+        </NavLink> */}
       </nav>
     </div>
   );
