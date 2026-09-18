@@ -1,0 +1,19 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/ssd-studyapp-api', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/ssd-studyapp-api']
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ssd-studyapp-api
+      - --image=asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/ssd-studyapp-api
+      - --region=asia-south1
+      - --allow-unauthenticated
+      - --max-instances=2
+      - --set-env-vars=DJANGO_DEBUG=False,DJANGO_ADMIN_URL=xk29-panel/,DJANGO_ALLOWED_HOSTS=ssd-studyapp-api-80165171345.asia-south1.run.app,CORS_EXTRA_ORIGINS=https://ssd-studyapp.vercel.app
+      - --set-secrets=DJANGO_SECRET_KEY=django-secret-key:latest,DATABASE_URL=database-url:latest,GEMINI_API_KEY=gemini-api-key:latest
+images:
+  - 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/ssd-studyapp-api'
