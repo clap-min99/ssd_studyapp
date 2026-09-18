@@ -48,7 +48,7 @@ export default function App() {
           <Route path="/digest/:id" element={<DigestDetail />} />
           <Route path="/glossary" element={<Glossary />} />
           <Route path="/review" element={<Review />} />
-          <Route path="/categories" element={<Categories />} />
+          {/* <Route path="/categories" element={<Categories />} /> */}
         </Routes>
       </main>
 

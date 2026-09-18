@@ -531,3 +531,16 @@ h3 {
 .question-add-form .search-input {
   margin-bottom: 0;
 }
+
+.view-switcher, .tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pill-button {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}

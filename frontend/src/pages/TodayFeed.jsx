@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
+import { api, CATEGORY_BADGE_CLASS, CATEGORY_LABEL } from "../api/client";
 import DigestView from "./DigestView";
 
-const CATEGORY_LABELS = { ssd: "SSD/NAND", automotive: "자동차 SW" };
+const VIEWS = [
+  { value: "", label: "오늘" },
+  { value: "ssd", label: "SSD/NAND" },
+  { value: "automotive", label: "자동차 SW" },
+];
 
 export default function TodayFeed() {
   const [digest, setDigest] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [view, setView] = useState("");
   const [tags, setTags] = useState([]);
-  const [category, setCategory] = useState("");
   const [selectedTag, setSelectedTag] = useState(null);
   const [tagArticles, setTagArticles] = useState([]);
 
@@ -19,64 +23,82 @@ export default function TodayFeed() {
     api.getTags().then(setTags);
   }, []);
 
-  const handleCategoryChange = (e) => {
-    setCategory(e.target.value);
+  const changeView = (value) => {
+    setView(value);
     setSelectedTag(null);
     setTagArticles([]);
   };
 
-  const handleTagChange = async (e) => {
-    const slug = e.target.value;
-    const tag = tags.find((t) => t.slug === slug);
-    setSelectedTag(tag || null);
-    setTagArticles(tag ? await api.getTagArticles(tag.slug) : []);
+  const selectTag = async (tag) => {
+    setSelectedTag(tag);
+    setTagArticles(await api.getTagArticles(tag.slug));
   };
 
-  const filteredTags = tags.filter((t) => t.category === category);
+  const filteredTags = tags.filter((t) => t.category === view);
 
   return (
     <div>
-      <div className="category-browser">
-        <select value={category} onChange={handleCategoryChange}>
-          <option value="">카테고리로 찾아보기</option>
-          {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-
-        {category && (
-          <select value={selectedTag?.slug || ""} onChange={handleTagChange}>
-            <option value="">태그 선택</option>
-            {filteredTags.map((t) => (
-              <option key={t.slug} value={t.slug}>{t.name}</option>
-            ))}
-          </select>
-        )}
-
-        {selectedTag && (
-          <div className="card">
-            <p className="status-message">{selectedTag.description}</p>
-            {tagArticles.map((a) => (
-              <div key={a.id} className="card">
-                <h3>{a.title}</h3>
-                <p>{a.summary}</p>
-                {a.links?.length > 0 && (
-                  <ul>
-                    {a.links.map((url) => (
-                      <li key={url}><a href={url} target="_blank" rel="noreferrer">{url}</a></li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="view-switcher">
+        {VIEWS.map((v) => (
+          <button
+            key={v.value}
+            className={`pill pill-button ${view === v.value ? "pill-accent" : "pill-neutral"}`}
+            onClick={() => changeView(v.value)}
+          >
+            {v.label}
+          </button>
+        ))}
       </div>
 
-      {loading && <p className="status-message">불러오는 중...</p>}
-      {error && <p className="status-message error">{error}</p>}
-      {!loading && !error && digest && <DigestView digest={digest} />}
-      {!loading && !error && !digest && <p className="status-message">아직 저장된 다이제스트가 없어요.</p>}
+      {view === "" && (
+        <>
+          {loading && <p className="status-message">불러오는 중...</p>}
+          {error && <p className="status-message error">{error}</p>}
+          {!loading && !error && digest && <DigestView digest={digest} />}
+          {!loading && !error && !digest && <p className="status-message">아직 저장된 다이제스트가 없어요.</p>}
+        </>
+      )}
+
+      {view !== "" && (
+        <div>
+          <div className="tag-row">
+            {filteredTags.map((t) => (
+              <button
+                key={t.slug}
+                className={`pill pill-button ${selectedTag?.slug === t.slug ? "pill-accent" : CATEGORY_BADGE_CLASS[t.category] ?? "pill-neutral"}`}
+                onClick={() => selectTag(t)}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+
+          {selectedTag && (
+            <>
+              <p className="status-message">{selectedTag.description}</p>
+              {tagArticles.map((a) => (
+                <article key={a.id} className="card">
+                  <span className={`badge ${CATEGORY_BADGE_CLASS[a.category] ?? ""}`}>
+                    {CATEGORY_LABEL[a.category] ?? a.category}
+                  </span>
+                  <h3>{a.title}</h3>
+                  {a.summary && <p>{a.summary}</p>}
+                  {a.insight && <p className="insight">💡 {a.insight}</p>}
+                  {a.links.length > 0 && (
+                    <div className="links">
+                      {a.links.map((link) => (
+                        <a key={link} href={link} target="_blank" rel="noreferrer">
+                          원문 링크
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
