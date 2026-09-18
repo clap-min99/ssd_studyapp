@@ -3,6 +3,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import TodayFeed from "./pages/TodayFeed";
 import Timeline from "./pages/Timeline";
 import DigestDetail from "./pages/DigestDetail";
+import Categories from './pages/Categories';
 import Glossary from "./pages/Glossary";
 import Review from "./pages/Review";
 import Login from "./pages/Login";
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/digest/:id" element={<DigestDetail />} />
           <Route path="/glossary" element={<Glossary />} />
           <Route path="/review" element={<Review />} />
+          <Route path="/categories" element={<Categories />} />
         </Routes>
       </main>
 
@@ -66,6 +68,10 @@ export default function App() {
         <NavLink to="/review" className="nav-item">
           <span className="nav-icon">🔁</span>
           복습
+        </NavLink>
+          <NavLink to="/categories" className="nav-item">
+          <span className="nav-icon">🏷️</span>
+          카테고리
         </NavLink>
       </nav>
     </div>

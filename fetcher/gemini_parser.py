@@ -47,7 +47,10 @@ SYSTEM_PROMPT = """\
       "links": ["url1", "url2"],
       "summary": "요약 (원문 문장 그대로 복사하지 말고 핵심만)",
       "insight": "인사이트",
-      "category": "ssd" 또는 "automotive"
+      "category": "ssd" 또는 "automotive",
+      "tags": ["slug1", "slug2"]
+    }
+  ],
     }
   ],
   "no_article_categories": ["ssd", "automotive"],
@@ -64,6 +67,11 @@ SYSTEM_PROMPT = """\
 - 기사에 링크가 여러 개(예: 배경 링크) 있으면 links 배열에 모두 넣어라.
 - summary/insight/body는 원문을 과도하게 그대로 베끼지 말고 핵심만 정리하라.
 - 날짜는 메일 제목이나 본문에서 찾은 [YYYY-MM-DD] 형식을 사용하라. 못 찾으면 null.
+- tags는 아래 목록의 slug 중 기사 내용에 해당하는 것을 전부 골라라 (없으면 빈 배열).
+
+사용 가능한 태그:
+  SSD: ftl, nand, interface, controller, reliability, emerging, market-ssd
+  자동차: autosar, adas, semiconductor, battery, market-auto
 """
 
 
@@ -74,6 +82,7 @@ class Article:
     summary: str = ""
     insight: str = ""
     category: str = ""
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -112,7 +121,7 @@ def _none_to_empty(d: dict) -> dict:
     for k, v in d.items():
         if v is not None:
             cleaned[k] = v
-        elif k == "links":
+        elif k in ("links", "tags"):
             cleaned[k] = []
         else:
             cleaned[k] = ""
@@ -229,3 +238,53 @@ NVMe는 호스트와 SSD 사이에 Submission Queue(SQ)와 Completion Queue(CQ)�
     print(f"기사 없음 카테고리: {parsed.no_article_categories}")
     for li in parsed.learning_items:
         print(" -", li.heading)
+        
+
+@dataclass
+class Article:
+    title: str
+    links: list[str] = field(default_factory=list)
+    summary: str = ""
+    insight: str = ""
+    category: str = ""
+    tags: list[str] = field(default_factory=list)
+
+TAG_SYSTEM_PROMPT = """\
+너는 SSD/자동차 SW 뉴스 기사에 알맞은 태그를 골라주는 분류기다.
+
+반드시 아래 JSON 스키마로만 응답하라.
+
+{
+  "tags": ["slug1", "slug2"]
+}
+
+사용 가능한 태그:
+  SSD: ftl, nand, interface, controller, reliability, emerging, market-ssd
+  자동차: autosar, adas, semiconductor, battery, market-auto
+
+기사 내용에 해당하는 태그를 전부 골라라 (없으면 빈 배열). 목록에 없는 태그는 만들지 마라.
+"""
+
+
+def tag_article(title: str, summary: str, category: str) -> list[str]:
+    """기존 기사(제목/요약)를 보고 알맞은 태그 slug 목록을 고른다. 백필용."""
+    client = _get_client()
+    prompt = f"제목: {title}\n요약: {summary}\n카테고리: {category}"
+
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=TAG_SYSTEM_PROMPT,
+            response_mime_type="application/json",
+        ),
+    )
+
+    text = response.text.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+
+    return json.loads(text).get("tags", [])

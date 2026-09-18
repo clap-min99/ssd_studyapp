@@ -33,6 +33,7 @@ class Article(models.Model):
     summary = models.TextField(blank=True)
     insight = models.TextField(blank=True)
     category = models.CharField(max_length=20, choices=Category.choices)
+    tags = models.ManyToManyField("Tag", blank=True) 
 
     class Meta:
         ordering = ["digest__date"]
@@ -189,3 +190,10 @@ class DailyActivity(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} · {self.date}"
+
+# digest/models.py
+class Tag(models.Model):
+    slug = models.SlugField(unique=True)
+    name = models.CharField(max_length=50)
+    description = models.CharField(max_length=200)
+    category = models.CharField(max_length=20, choices=[('ssd', 'SSD'), ('automotive', '자동차')])

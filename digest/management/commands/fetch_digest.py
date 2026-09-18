@@ -17,7 +17,7 @@ from datetime import date as date_cls
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from digest.models import Article, DailyDigest, LearningItem, Term
+from digest.models import Article, DailyDigest, LearningItem, Term, Tag
 from fetcher.gemini_parser import parse_digest_with_gemini
 from fetcher.gmail_client import fetch_latest_digest
 
@@ -86,8 +86,8 @@ class Command(BaseCommand):
                 digest_obj.articles.all().delete()
                 digest_obj.learning_items.all().delete()
 
-            for a in parsed.articles:
-                Article.objects.create(
+                        for a in parsed.articles:
+                article_obj = Article.objects.create(
                     digest=digest_obj,
                     title=a.title,
                     links=a.links,
@@ -95,6 +95,8 @@ class Command(BaseCommand):
                     insight=a.insight,
                     category=a.category,
                 )
+                if a.tags:
+                    article_obj.tags.set(Tag.objects.filter(slug__in=a.tags))
 
             for li in parsed.learning_items:
                 LearningItem.objects.create(

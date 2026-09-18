@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Article, DailyDigest, Insight, LearningItem, Question, ReviewRecord, Term
+from .models import Article, DailyDigest, Insight, LearningItem, Question, ReviewRecord, Term, Tag
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -123,3 +123,9 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Question
         fields = ["id", "text", "resolved", "created_at", "digest_date"]
         read_only_fields = ["created_at"]
+
+# digest/serializers.py
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['slug', 'name', 'description', 'category']

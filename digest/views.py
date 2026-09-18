@@ -1,14 +1,14 @@
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, viewsets, generics
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import DailyActivity, DailyDigest, Insight, Question, ReviewRecord, Term
+from .models import DailyActivity, DailyDigest, Insight, Question, ReviewRecord, Term, Tag, Article
 from .serializers import (
     DailyDigestDetailSerializer,
     DailyDigestListSerializer,
@@ -18,6 +18,8 @@ from .serializers import (
     ReviewAnswerSerializer,
     TermDetailSerializer,
     TermSerializer,
+    TagSerializer,
+    ArticleSerializer
 )
 
 
@@ -273,3 +275,14 @@ class StreakView(APIView):
             cursor -= timezone.timedelta(days=1)
 
         return Response({"current_streak": streak, "active_today": active_today})
+    
+class TagListView(generics.ListAPIView):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    permission_classes = [AllowAny]
+
+class TagArticlesView(generics.ListAPIView):
+    serializer_class = ArticleSerializer
+    permission_classes = [AllowAny]
+    def get_queryset(self):
+        return Article.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date')

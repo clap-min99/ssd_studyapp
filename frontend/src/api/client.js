@@ -46,6 +46,8 @@ export const api = {
   getDigestList: () => get("/digests/"),
   getDigestDetail: (id) => get(`/digests/${id}/`),
   getTerms: () => get("/terms/"),
+  getTags: () => get("/tags/"),
+  getTagArticles: (slug) => get(`/tags/${slug}/articles/`),
 };
 
 export const CATEGORY_LABEL = {
