@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8000
+ENV DJANGO_SECRET_KEY=build-only-dummy
+RUN python manage.py collectstatic --no-input
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
