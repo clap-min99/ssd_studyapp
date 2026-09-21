@@ -7,6 +7,7 @@ import DigestDetail from "./pages/DigestDetail";
 import Glossary from "./pages/Glossary";
 import Review from "./pages/Review";
 import Login from "./pages/Login";
+import Privacy from './pages/Privacy';
 import StreakBadge from "./components/StreakBadge";
 import { auth } from "./api/client";
 import "./App.css";
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/digest/:id" element={<DigestDetail />} />
           <Route path="/glossary" element={<Glossary />} />
           <Route path="/review" element={<Review />} />
+          <Route path="/privacy" element={<Privacy />} />
           {/* <Route path="/categories" element={<Categories />} /> */}
         </Routes>
       </main>
