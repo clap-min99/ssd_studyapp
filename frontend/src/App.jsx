@@ -14,7 +14,7 @@ import "./App.css";
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(auth.isLoggedIn());
-
+  const [streakVersion, setStreakVersion] = useState(0);
   if (!loggedIn) {
     return (
       <div className="app">
@@ -34,7 +34,7 @@ export default function App() {
     <div className="app">
       <main className="main-content">
         <div className="topbar">
-          <StreakBadge />
+           <StreakBadge refreshKey={streakVersion} />
           <div className="topbar-right">
             <span className="topbar-username">{auth.getUsername()}</span>
             <button className="logout-link" onClick={handleLogout}>
@@ -48,8 +48,8 @@ export default function App() {
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/digest/:id" element={<DigestDetail />} />
           <Route path="/glossary" element={<Glossary />} />
-          <Route path="/review" element={<Review />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/review" element={<Review onAnswered={() => setStreakVersion((v) => v + 1)} />} />
           {/* <Route path="/categories" element={<Categories />} /> */}
         </Routes>
       </main>

@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { reviewApi } from "../api/client";
 
-/** 상단바에 붙는 연속 복습일수 배지. 스트릭이 0이면 아무것도 안 보여준다
- *  (시작 전인데 "0일 연속"이라고 보여주는 건 오히려 김빠짐). */
-export default function StreakBadge() {
+export default function StreakBadge({ refreshKey }) {
   const [streak, setStreak] = useState(null);
 
   useEffect(() => {
@@ -15,7 +13,7 @@ export default function StreakBadge() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   if (!streak) return null;
 

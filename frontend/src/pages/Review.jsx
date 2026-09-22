@@ -16,7 +16,7 @@ function shuffle(arr) {
   return copy;
 }
 
-export default function Review() {
+export default function Review(onAnswered) {
   const [mode, setMode] = useState("written"); // "written" | "choice"
 
   const [terms, setTerms] = useState([]);
@@ -88,6 +88,7 @@ export default function Review() {
   async function handleSelfGrade(familiarity) {
     try {
       await reviewApi.submitAnswer(current.id, familiarity);
+      onAnswered?.();
     } catch (e) {
       console.error(e);
     }
@@ -100,6 +101,7 @@ export default function Review() {
     const familiarity = choice === current.meaning ? "familiar" : "new";
     try {
       await reviewApi.submitAnswer(current.id, familiarity);
+      onAnswered?.();
     } catch (e) {
       console.error(e);
     }
