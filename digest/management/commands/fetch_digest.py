@@ -86,8 +86,8 @@ class Command(BaseCommand):
                 digest_obj.articles.all().delete()
                 digest_obj.learning_items.all().delete()
 
-                for a in parsed.articles:
-                    article_obj = Article.objects.create(
+            for a in parsed.articles:
+                article_obj = Article.objects.create(
                     digest=digest_obj,
                     title=a.title,
                     links=a.links,

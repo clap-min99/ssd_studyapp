@@ -65,7 +65,6 @@ SYSTEM_PROMPT = """\
 규칙:
 - 기사가 없다고 명시된 카테고리는 "no_article_categories"에 넣고 articles에는 넣지 마라.
 - 기사에 링크가 여러 개(예: 배경 링크) 있으면 links 배열에 모두 넣어라.
-- summary/insight/body는 원문을 과도하게 그대로 베끼지 말고 핵심만 정리하라.
 - 날짜는 메일 제목이나 본문에서 찾은 [YYYY-MM-DD] 형식을 사용하라. 못 찾으면 null.
 - tags는 아래 목록의 slug 중 기사 내용에 해당하는 것을 전부 골라라 (없으면 빈 배열).
 
@@ -108,7 +107,18 @@ class ParsedDigest:
 
 
 def _get_client() -> genai.Client:
-    return genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    return genai.Client(
+        api_key=os.environ["GEMINI_API_KEY"],
+        http_options=types.HttpOptions(
+            retry_options=types.HttpRetryOptions(
+                attempts=5,
+                initial_delay=20.0,
+                max_delay=20.0,
+                exp_base=1,
+                http_status_codes=[500, 502, 503, 504],
+            ),
+        ),
+    )
 
 
 def _none_to_empty(d: dict) -> dict:
@@ -240,14 +250,7 @@ NVMe는 호스트와 SSD 사이에 Submission Queue(SQ)와 Completion Queue(CQ)�
         print(" -", li.heading)
         
 
-@dataclass
-class Article:
-    title: str
-    links: list[str] = field(default_factory=list)
-    summary: str = ""
-    insight: str = ""
-    category: str = ""
-    tags: list[str] = field(default_factory=list)
+
 
 TAG_SYSTEM_PROMPT = """\
 너는 SSD/자동차 SW 뉴스 기사에 알맞은 태그를 골라주는 분류기다.
