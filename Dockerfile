@@ -10,4 +10,4 @@ COPY . .
 ENV DJANGO_SECRET_KEY=build-only-dummy
 RUN python manage.py collectstatic --no-input
 
-CMD exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+CMD exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120
