@@ -13,10 +13,17 @@ SSD/NAND 컨트롤러 펌웨어 및 자동차 SW 취업을 목표로, 매일 수
 
 - **오늘 피드** — 가장 최근 다이제스트를 한 화면에. 카테고리(SSD/자동차) → 태그(FTL, NAND,
   PCIe, AUTOSAR 등) 알약 버튼으로 좁혀서, 지나간 기사도 주제별로 다시 찾아볼 수 있음
+- **챕터(커리큘럼)** — 태그를 "학습 순서가 있는 챕터"로 확장한 것. SSD 트랙 6개
+  (NAND 기초 → 호스트 인터페이스 → FTL → 컨트롤러 → 신뢰성 → 차세대), 자동차 트랙 5개
+  (차량 전자 구조 → 차량 통신 → AUTOSAR & SDV → 기능안전과 보안 → ADAS/응용 SW)로
+  구성. 각 챕터는 선행/다음 챕터 링크로 순서대로 이어지고, 챕터 안은 다시 여러 하위
+  레슨으로 나뉘어(레슨끼리도 이전/다음 이동) 있음. 레슨 본문은 마크다운 + 인라인 SVG
+  다이어그램으로 작성, 관련 용어·관련 기사도 탭으로 함께 보여줌
 - **타임라인** — 날짜별로 쌓인 기록을 훑어보기
 - **용어 사전** — 지금까지 나온 모든 용어를 검색 가능한 형태로 누적. "용어/개념" 토글로
   플래시카드식 용어 설명과, 기사 없는 날 오는 미니 아티클(개념 설명)을 구분해서 봄.
-  개념도 태그로 카테고리 필터링 가능
+  개념도 태그로 카테고리 필터링 가능. 용어는 챕터에도 태깅되어 있어 챕터 상세의
+  "관련 용어" 탭에서 다시 보임
 - **복습** — 간격 반복(spaced repetition) 알고리즘 기반. 서술형(Gemini 첨삭) / 객관식
   (다른 용어 뜻풀이를 오답 보기로 활용) 두 모드 지원. 맞으면 간격이 늘어나고, 틀리면 다음 날
   다시 봄
@@ -52,6 +59,7 @@ SSD/NAND 컨트롤러 펌웨어 및 자동차 SW 취업을 목표로, 매일 수
 | 인증 | DRF TokenAuthentication |
 | 자동화 | GitHub Actions (스케줄 cron) |
 | 프론트엔드 | React (Vite ^5.4.11 고정) + React Router, 순수 CSS |
+| 레슨 렌더링 | `marked` — 레슨 본문(마크다운 + 인라인 SVG)을 HTML로 변환 |
 | 배포 | Google Cloud Run(백엔드, asia-south1) + Vercel(프론트엔드) |
 | CI/CD | Cloud Build 트리거 — `master` push 시 자동 빌드+배포 |
 
@@ -73,15 +81,21 @@ ssd_studyapp/
 │
 ├── digest/
 │   ├── models.py                # DailyDigest / Article / LearningItem / Term /
-│   │                             # Tag / ReviewRecord / Insight / Question / DailyActivity
+│   │                             # Tag(=챕터, order/prerequisite/lesson_body 포함) /
+│   │                             # Lesson(챕터 하위 레슨) / ReviewRecord / Insight /
+│   │                             # Question / DailyActivity
 │   ├── serializers.py
 │   ├── views.py
 │   ├── urls.py
 │   ├── admin.py
 │   └── management/commands/
-│       ├── fetch_digest.py      # 매일 실행되는 핵심 커맨드 (--force, --dry-run 지원)
-│       ├── seed_tags.py         # 태그 12종 초기 데이터
-│       └── backfill_tags.py     # 기존 기사에 소급으로 태그 채우는 1회성 커맨드
+│       ├── fetch_digest.py         # 매일 실행되는 핵심 커맨드 (--force, --dry-run 지원)
+│       ├── seed_tags.py            # 태그(=챕터) 초기 데이터, order/prerequisite 포함
+│       ├── seed_lessons.py         # 챕터 단일 페이지 레슨 본문(Tag.lesson_body) 시드
+│       ├── seed_lesson_pages.py    # 챕터를 여러 하위 레슨(Lesson)으로 쪼갠 콘텐츠 시드
+│       ├── backfill_tags.py        # 기존 기사에 소급으로 태그 채우는 1회성 커맨드(Gemini)
+│       └── backfill_term_tags.py   # 기존 용어에 소급으로 태그 채우는 1회성 커맨드(Gemini,
+│                                    # 무료 티어 하루 20회 제한이라 레이트리밋 재시도 포함)
 │
 ├── fetcher/                     # Django와 독립적인 수집/파싱 모듈
 │   ├── gmail_client.py
@@ -96,12 +110,15 @@ ssd_studyapp/
     │   ├── api/client.js        # api / reviewApi, CATEGORY_LABEL/BADGE_CLASS
     │   ├── components/          # Modal, TermDetail, DigestNotes, StreakBadge
     │   ├── pages/
-    │   │   ├── TodayFeed.jsx    # 오늘 피드 + 카테고리/태그 브라우저
+    │   │   ├── TodayFeed.jsx     # 오늘 피드 + 카테고리/태그 브라우저
     │   │   ├── Timeline.jsx
     │   │   ├── DigestDetail.jsx / DigestView.jsx
-    │   │   ├── Glossary.jsx     # 용어/개념 토글 + 카테고리 필터
-    │   │   ├── Review.jsx       # 서술형/객관식 복습
-    │   │   ├── Privacy.jsx      # OAuth 프로덕션 게시용 최소 개인정보처리방침
+    │   │   ├── Chapters.jsx      # 챕터 목록, SSD/자동차 트랙 전환 탭
+    │   │   ├── ChapterDetail.jsx # 챕터 상세 — 레슨 목차(또는 단일 페이지)/관련 용어/실제 사례 탭
+    │   │   ├── LessonDetail.jsx  # 레슨 본문(마크다운+SVG), 이전/다음 레슨·다음 챕터 이동
+    │   │   ├── Glossary.jsx      # 용어/개념 토글 + 카테고리 필터
+    │   │   ├── Review.jsx        # 서술형/객관식 복습
+    │   │   ├── Privacy.jsx       # OAuth 프로덕션 게시용 최소 개인정보처리방침
     │   │   └── Login.jsx
     │   ├── App.jsx / App.css
     └── vercel.json
@@ -113,8 +130,10 @@ ssd_studyapp/
 # 백엔드
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py seed_tags
-python manage.py fetch_digest      # 최초 실행 시 브라우저 인증 필요 (credentials.json 필요)
+python manage.py seed_tags              # 태그(=챕터) 목록/순서
+python manage.py seed_lessons           # 챕터 단일 페이지 레슨 본문
+python manage.py seed_lesson_pages      # 챕터를 하위 레슨 여러 개로 쪼갠 콘텐츠 (있는 챕터만)
+python manage.py fetch_digest           # 최초 실행 시 브라우저 인증 필요 (credentials.json 필요)
 python manage.py runserver
 
 # 프론트엔드
@@ -132,6 +151,27 @@ python manage.py fetch_digest --force      # 같은 날짜 데이터 덮어쓰�
 
 로컬 `.env`의 `DATABASE_URL`이 Supabase 프로덕션 주소와 동일하므로, 로컬에서 실행한
 결과가 곧바로 실제 서비스에 반영됨 (별도의 로컬 전용 DB 없음).
+
+## 커리큘럼(챕터) 콘텐츠 구조
+
+새 모델을 만드는 대신 기존 `Tag`를 확장해서 챕터로 썼음 — 기존 태그 경계가 챕터
+경계와 거의 겹쳐서, 새 taxonomy를 따로 만들고 유지보수하는 부담을 피함.
+
+- `Tag.order > 0`이면 학습 순서가 있는 "챕터", `0`이면 순서 없는 일반 분류 태그
+  (`market-ssd`, `market-auto`, `semiconductor`, `battery` 등 콘텐츠가 아직 얇은 것들)
+- `Tag.prerequisite`가 선행 챕터를 가리키는 자기참조 FK. 역참조(`next_chapters`)로
+  "다음 챕터"도 같이 구함
+- 레슨 본문은 두 갈래로 존재: `Tag.lesson_body`(챕터 전체가 한 페이지짜리일 때) 또는
+  `Lesson`(챕터를 여러 하위 레슨으로 쪼갰을 때). `Lesson`이 하나라도 있으면 프론트가
+  그쪽을 우선 보여주고, 없으면 `lesson_body`로 폴백 — 그래서 챕터마다 깊이가 달라도
+  안 깨짐
+- 레슨 콘텐츠는 Gemini로 매번 생성하지 않고 **미리 손으로 작성해서 시드**해둠(위
+  명령어들). 교과서 성격의 콘텐츠라 매일 바뀔 이유가 없고, 런타임 API 호출/할당량
+  걱정 없이 품질을 한 번에 검수할 수 있어서 이 방식을 택함
+- 그림은 별도 이미지 호스팅 없이 **레슨 본문 마크다운 안에 인라인 SVG**로 직접 그려
+  넣음(`marked`가 raw HTML을 그대로 통과시킴). 새 다이어그램을 추가할 때 반드시
+  지킬 것 두 가지 — 아래 트러블슈팅 로그의 "SVG 그림 일부가 사라짐", "숫자 범위
+  표기가 취소선으로 보임" 항목 참고
 
 ## 배포 (Google Cloud Run)
 
@@ -210,9 +250,16 @@ API 응답마다 발생하는 서버↔DB 왕복 지연을 없앰 — 처음엔 
 | 새 다이제스트에 기사가 하나도 저장 안 됨 | 태그 기능 추가 중 들여쓰기 실수로 기사 저장 루프가 `if not created:` 블록 안에 갇힘 | 루프를 블록 밖으로 이동 |
 | Gmail 토큰 7일마다 만료 | OAuth 동의 화면이 "테스트" 상태 | "프로덕션"으로 게시 (위 자동화 섹션 참고) |
 | 스트릭 배지가 갱신 안 됨 | `StreakBadge`가 앱 마운트 시 한 번만 fetch, 복습 완료 이벤트를 못 받음 | `refreshKey` prop + 복습 제출 시 콜백으로 재조회 트리거 |
+| 레슨의 SVG 그림 일부가 사라짐 | 레슨 본문 markdown 안에서 `<svg>...</svg>` 블록 중간에 빈 줄이 있으면, 마크다운 파서가 그 지점에서 HTML 블록을 끊어버려 이후 태그들이 `<svg>` 밖으로 떨어져 나가 렌더링 안 됨 | SVG 블록 내부에 빈 줄 절대 넣지 않기 |
+| "6만~10만 회" 같은 숫자 범위 표기가 취소선으로 보임 | GFM 마크다운이 단일 `~`도 취소선(strikethrough) 문법으로 해석 | 범위 표기의 `~`는 `\~`로 이스케이프 |
+| "**용어(영문)**이/가/은/는" 형태의 볼드가 안 먹고 별표가 그대로 보임 | CommonMark의 강조 닫힘 규칙상, 닫는 `**` 바로 앞이 괄호 등 구두점이면서 바로 뒤에 공백/구두점 없이 문자(조사)가 오면 우측-플랭킹 조건을 못 만족해 닫힘으로 인정 안 됨 | `)**조사` 패턴 뒤에 공백 하나 추가 (`)** 조사`) — 새 레슨 콘텐츠 작성 후 `\)\*\*[가-힣]` 정규식으로 항상 검사 |
 
 ## 앞으로 할 것
 
 - [ ] PWA 오프라인 지원
 - [ ] 질문/인사이트 전체 모아보기 화면 (API는 이미 있음, 프론트 화면만 없음)
 - [ ] 용어 숙련도 통계/대시보드
+- [ ] 자동차 트랙의 `semiconductor`/`battery`/`market-auto` 태그 — 콘텐츠가 아직
+      얇아서(1~2건) 챕터로 승격 안 하고 일반 태그로 남겨둠. 관련 기사/용어가 쌓이면
+      챕터로 정리
+- [ ] 챕터/레슨 완료 체크(진행률) — 지금은 그냥 다 보여주기만 함
