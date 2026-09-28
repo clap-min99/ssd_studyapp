@@ -570,3 +570,115 @@ h3 {
   border-color: #c0392b;
   background: #fbeaea;
 }
+
+/* --- 챕터 목록 --- */
+.chapter-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.chapter-card .chapter-order-badge {
+  flex-shrink: 0;
+}
+
+.chapter-card-body h3 {
+  margin: 0 0 4px;
+}
+
+.chapter-card-body p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* --- 챕터 상세 헤더 --- */
+.chapter-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.chapter-order-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.chapter-description {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+.chapter-prereq {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chapter-prereq strong {
+  color: var(--ink);
+}
+
+.chapter-next-btn {
+  margin-top: 28px;
+}
+
+/* --- 레슨 본문 (마크다운 렌더링) --- */
+.lesson-content {
+  font-size: 15px;
+  line-height: 1.75;
+  color: #2d3036;
+  margin-top: 16px;
+}
+
+.lesson-content h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  background: none;
+  padding: 0;
+  margin: 30px 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent-soft);
+}
+
+.lesson-content h2:first-child {
+  margin-top: 0;
+}
+
+.lesson-content p {
+  margin: 0 0 14px;
+}
+
+.lesson-content ul, .lesson-content ol {
+  margin: 0 0 14px;
+  padding-left: 20px;
+}
+
+.lesson-content li {
+  margin-bottom: 6px;
+}
+
+.lesson-content strong {
+  color: var(--accent);
+  font-weight: 700;
+}

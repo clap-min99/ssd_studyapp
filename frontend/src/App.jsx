@@ -4,6 +4,8 @@ import TodayFeed from "./pages/TodayFeed";
 import Timeline from "./pages/Timeline";
 import DigestDetail from "./pages/DigestDetail";
 // import Categories from './pages/Categories';
+import Chapters from "./pages/Chapters";
+import ChapterDetail from "./pages/ChapterDetail";
 import Glossary from "./pages/Glossary";
 import Review from "./pages/Review";
 import Login from "./pages/Login";
@@ -47,6 +49,8 @@ export default function App() {
           <Route path="/" element={<TodayFeed />} />
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/digest/:id" element={<DigestDetail />} />
+          <Route path="/chapters" element={<Chapters />} />
+          <Route path="/chapters/:slug" element={<ChapterDetail />} />
           <Route path="/glossary" element={<Glossary />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/review" element={<Review onAnswered={() => setStreakVersion((v) => v + 1)} />} />
@@ -62,6 +66,10 @@ export default function App() {
         <NavLink to="/timeline" className="nav-item">
           <span className="nav-icon">🗂️</span>
           타임라인
+        </NavLink>
+        <NavLink to="/chapters" className="nav-item">
+          <span className="nav-icon">📚</span>
+          챕터
         </NavLink>
         <NavLink to="/glossary" className="nav-item">
           <span className="nav-icon">📖</span>

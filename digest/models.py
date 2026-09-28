@@ -72,6 +72,7 @@ class Term(models.Model):
     appeared_in = models.ManyToManyField(
         DailyDigest, related_name="mentioned_terms", blank=True
     )
+    tags = models.ManyToManyField("Tag", related_name="terms", blank=True)
 
     class Meta:
         ordering = ["term"]
@@ -194,7 +195,21 @@ class DailyActivity(models.Model):
 
 # digest/models.py
 class Tag(models.Model):
+    """주제 태그. 커리큘럼 챕터 역할도 겸한다 — order가 0보다 크면 정해진 학습 순서가
+    있는 '챕터'로 취급하고, 0이면 순서 없이 분류용으로만 쓰는 일반 태그로 남는다."""
+
     slug = models.SlugField(unique=True)
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=200)
     category = models.CharField(max_length=20, choices=[('ssd', 'SSD'), ('automotive', '자동차')])
+    order = models.PositiveIntegerField(default=0)
+    prerequisite = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="next_chapters"
+    )
+    lesson_body = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self) -> str:
+        return self.name

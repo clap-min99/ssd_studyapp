@@ -19,6 +19,7 @@ from .serializers import (
     TermDetailSerializer,
     TermSerializer,
     TagSerializer,
+    TagDetailSerializer,
     ArticleSerializer,
     LearningItemSerializer
 )
@@ -281,6 +282,25 @@ class TagListView(generics.ListAPIView):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny]
+
+class TagDetailView(generics.RetrieveAPIView):
+    """
+    GET /api/tags/{slug}/  -> 챕터 상세 (레슨 본문, 선행 챕터 포함)
+    """
+    queryset = Tag.objects.all()
+    serializer_class = TagDetailSerializer
+    lookup_field = "slug"
+    permission_classes = [AllowAny]
+
+class TagTermsView(generics.ListAPIView):
+    """
+    GET /api/tags/{slug}/terms/ -> 이 챕터에 연결된 용어 목록
+    """
+    serializer_class = TermSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        return Term.objects.filter(tags__slug=self.kwargs["slug"])
 
 class TagArticlesView(generics.ListAPIView):
     serializer_class = ArticleSerializer

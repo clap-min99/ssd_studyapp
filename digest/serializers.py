@@ -128,8 +128,44 @@ class QuestionSerializer(serializers.ModelSerializer):
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ['slug', 'name', 'description', 'category']
-        
+        fields = ['slug', 'name', 'description', 'category', 'order']
+
+
+class TagDetailSerializer(TagSerializer):
+    """챕터 상세 페이지용 — 레슨 본문, 선행/다음 챕터 정보를 포함한다."""
+
+    prerequisite_slug = serializers.SerializerMethodField()
+    prerequisite_name = serializers.SerializerMethodField()
+    next_slug = serializers.SerializerMethodField()
+    next_name = serializers.SerializerMethodField()
+
+    class Meta(TagSerializer.Meta):
+        fields = TagSerializer.Meta.fields + [
+            "lesson_body",
+            "prerequisite_slug",
+            "prerequisite_name",
+            "next_slug",
+            "next_name",
+        ]
+
+    def get_prerequisite_slug(self, obj):
+        return obj.prerequisite.slug if obj.prerequisite else None
+
+    def get_prerequisite_name(self, obj):
+        return obj.prerequisite.name if obj.prerequisite else None
+
+    def _next_chapter(self, obj):
+        return obj.next_chapters.filter(order__gt=0).order_by("order").first()
+
+    def get_next_slug(self, obj):
+        next_chapter = self._next_chapter(obj)
+        return next_chapter.slug if next_chapter else None
+
+    def get_next_name(self, obj):
+        next_chapter = self._next_chapter(obj)
+        return next_chapter.name if next_chapter else None
+
+
 class LearningItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = LearningItem

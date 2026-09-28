@@ -291,3 +291,44 @@ def tag_article(title: str, summary: str, category: str) -> list[str]:
         text = text.strip()
 
     return json.loads(text).get("tags", [])
+
+
+TERM_TAG_SYSTEM_PROMPT = """\
+너는 SSD/자동차 SW 용어 사전에 알맞은 태그를 골라주는 분류기다.
+
+반드시 아래 JSON 스키마로만 응답하라.
+
+{
+  "tags": ["slug1", "slug2"]
+}
+
+사용 가능한 태그:
+  SSD: ftl, nand, interface, controller, reliability, emerging, market-ssd
+  자동차: autosar, adas, semiconductor, battery, market-auto
+
+용어의 뜻풀이를 보고 가장 관련 있는 태그를 1~2개 골라라 (없으면 빈 배열). 목록에 없는 태그는 만들지 마라.
+"""
+
+
+def tag_term(term: str, meaning: str, relevance: str = "") -> list[str]:
+    """용어 사전 항목(용어/뜻풀이)을 보고 알맞은 태그 slug 목록을 고른다. 백필용."""
+    client = _get_client()
+    prompt = f"용어: {term}\n뜻풀이: {meaning}\n실무 연관성: {relevance}"
+
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=TERM_TAG_SYSTEM_PROMPT,
+            response_mime_type="application/json",
+        ),
+    )
+
+    text = response.text.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+
+    return json.loads(text).get("tags", [])
