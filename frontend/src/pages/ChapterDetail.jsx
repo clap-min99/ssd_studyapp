@@ -15,6 +15,7 @@ export default function ChapterDetail() {
   const navigate = useNavigate();
 
   const [chapter, setChapter] = useState(null);
+  const [lessons, setLessons] = useState([]);
   const [terms, setTerms] = useState([]);
   const [articles, setArticles] = useState([]);
   const [error, setError] = useState(null);
@@ -29,12 +30,14 @@ export default function ChapterDetail() {
 
     Promise.all([
       api.getTagDetail(slug),
+      api.getChapterLessons(slug),
       api.getTagTerms(slug),
       api.getTagArticles(slug),
     ])
-      .then(([chapterData, termsData, articlesData]) => {
+      .then(([chapterData, lessonsData, termsData, articlesData]) => {
         if (!active) return;
         setChapter(chapterData);
+        setLessons(lessonsData);
         setTerms(termsData);
         setArticles(articlesData);
       })
@@ -91,7 +94,20 @@ export default function ChapterDetail() {
       </div>
 
       {tab === "lesson" &&
-        (chapter.lesson_body ? (
+        (lessons.length > 0 ? (
+          lessons.map((l) => (
+            <article
+              key={l.id}
+              className="card clickable chapter-card"
+              onClick={() => navigate(`/chapters/${slug}/lessons/${l.id}`)}
+            >
+              <span className="chapter-order-badge">{l.order}</span>
+              <div className="chapter-card-body">
+                <h3>{l.title}</h3>
+              </div>
+            </article>
+          ))
+        ) : chapter.lesson_body ? (
           <div className="lesson-content" dangerouslySetInnerHTML={{ __html: lessonHtml }} />
         ) : (
           <p className="status-message">레슨 콘텐츠는 아직 준비 중이에요.</p>

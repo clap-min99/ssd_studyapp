@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticate
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import DailyActivity, DailyDigest, Insight, Question, ReviewRecord, Term, Tag, Article, LearningItem
+from .models import DailyActivity, DailyDigest, Insight, Lesson, Question, ReviewRecord, Term, Tag, Article, LearningItem
 from .serializers import (
     DailyDigestDetailSerializer,
     DailyDigestListSerializer,
@@ -20,6 +20,8 @@ from .serializers import (
     TermSerializer,
     TagSerializer,
     TagDetailSerializer,
+    LessonListSerializer,
+    LessonDetailSerializer,
     ArticleSerializer,
     LearningItemSerializer
 )
@@ -290,6 +292,24 @@ class TagDetailView(generics.RetrieveAPIView):
     queryset = Tag.objects.all()
     serializer_class = TagDetailSerializer
     lookup_field = "slug"
+    permission_classes = [AllowAny]
+
+class ChapterLessonsView(generics.ListAPIView):
+    """
+    GET /api/tags/{slug}/lessons/ -> 이 챕터의 하위 레슨 목차 (본문 제외)
+    """
+    serializer_class = LessonListSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return Lesson.objects.filter(chapter__slug=self.kwargs["slug"]).order_by("order")
+
+class LessonDetailView(generics.RetrieveAPIView):
+    """
+    GET /api/lessons/{id}/ -> 레슨 상세 (같은 챕터 안 이전/다음 레슨 포함)
+    """
+    queryset = Lesson.objects.all()
+    serializer_class = LessonDetailSerializer
     permission_classes = [AllowAny]
 
 class TagTermsView(generics.ListAPIView):

@@ -213,3 +213,19 @@ class Tag(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class Lesson(models.Model):
+    """챕터(Tag) 하나를 구성하는 하위 레슨. 챕터가 깊어질수록 이 단위로 쪼갠다."""
+
+    chapter = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="lessons")
+    order = models.PositiveIntegerField()
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+
+    class Meta:
+        ordering = ["chapter", "order"]
+        unique_together = ["chapter", "order"]
+
+    def __str__(self) -> str:
+        return f"{self.chapter.name} {self.order}. {self.title}"

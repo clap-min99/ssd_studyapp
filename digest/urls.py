@@ -15,6 +15,8 @@ from .views import (
     TagTermsView,
     TermViewSet,
     TagLearningItemsView,
+    ChapterLessonsView,
+    LessonDetailView,
 )
 
 router = DefaultRouter()
@@ -31,6 +33,8 @@ urlpatterns = [
     path("tags/<slug:slug>/", TagDetailView.as_view(), name="tag-detail"),
     path("tags/<slug:slug>/terms/", TagTermsView.as_view(), name="tag-terms"),
     path("tags/<slug:slug>/articles/", TagArticlesView.as_view(), name="tag-articles"),
+    path("tags/<slug:slug>/lessons/", ChapterLessonsView.as_view(), name="chapter-lessons"),
+    path("lessons/<int:pk>/", LessonDetailView.as_view(), name="lesson-detail"),
     path("learning-items/", LearningItemListView.as_view(), name="learning-item-list"),# 추가
     path("tags/<slug:slug>/learning-items/", TagLearningItemsView.as_view(), name="tag-learning-items"),
 ] + router.urls

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Article, DailyActivity, DailyDigest, Insight, LearningItem, Question, ReviewRecord, Tag, Term
+from .models import Article, DailyActivity, DailyDigest, Insight, LearningItem, Lesson, Question, ReviewRecord, Tag, Term
 
 
 class ArticleInline(admin.TabularInline):
@@ -46,6 +46,12 @@ class TermAdmin(admin.ModelAdmin):
     filter_horizontal = ["tags", "appeared_in"]
 
 
+class LessonInline(admin.TabularInline):
+    model = Lesson
+    extra = 0
+    fields = ["order", "title"]
+
+
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = ["order", "name", "slug", "category", "prerequisite"]
@@ -53,6 +59,14 @@ class TagAdmin(admin.ModelAdmin):
     list_editable = ["order"]
     list_filter = ["category"]
     search_fields = ["name", "slug"]
+    inlines = [LessonInline]
+
+
+@admin.register(Lesson)
+class LessonAdmin(admin.ModelAdmin):
+    list_display = ["chapter", "order", "title"]
+    list_filter = ["chapter"]
+    search_fields = ["title", "body"]
 
 
 @admin.register(ReviewRecord)

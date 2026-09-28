@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Article, DailyDigest, Insight, LearningItem, Question, ReviewRecord, Term, Tag
+from .models import Article, DailyDigest, Insight, LearningItem, Lesson, Question, ReviewRecord, Term, Tag
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -162,6 +162,68 @@ class TagDetailSerializer(TagSerializer):
         return next_chapter.slug if next_chapter else None
 
     def get_next_name(self, obj):
+        next_chapter = self._next_chapter(obj)
+        return next_chapter.name if next_chapter else None
+
+
+class LessonListSerializer(serializers.ModelSerializer):
+    """챕터 상세의 '레슨' 탭에 뜨는 목차용 — 본문(body)은 무거우니 뺀다."""
+
+    class Meta:
+        model = Lesson
+        fields = ["id", "order", "title"]
+
+
+class LessonDetailSerializer(serializers.ModelSerializer):
+    """레슨 하나를 읽는 화면용 — 같은 챕터 안 이전/다음 레슨과 챕터 정보를 포함한다."""
+
+    chapter_slug = serializers.CharField(source="chapter.slug", read_only=True)
+    chapter_name = serializers.CharField(source="chapter.name", read_only=True)
+    prev_lesson_id = serializers.SerializerMethodField()
+    next_lesson_id = serializers.SerializerMethodField()
+    next_lesson_title = serializers.SerializerMethodField()
+    next_chapter_slug = serializers.SerializerMethodField()
+    next_chapter_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Lesson
+        fields = [
+            "id",
+            "order",
+            "title",
+            "body",
+            "chapter_slug",
+            "chapter_name",
+            "prev_lesson_id",
+            "next_lesson_id",
+            "next_lesson_title",
+            "next_chapter_slug",
+            "next_chapter_name",
+        ]
+
+    def get_prev_lesson_id(self, obj):
+        prev = Lesson.objects.filter(chapter=obj.chapter, order__lt=obj.order).order_by("-order").first()
+        return prev.id if prev else None
+
+    def _next_lesson(self, obj):
+        return Lesson.objects.filter(chapter=obj.chapter, order__gt=obj.order).order_by("order").first()
+
+    def get_next_lesson_id(self, obj):
+        next_lesson = self._next_lesson(obj)
+        return next_lesson.id if next_lesson else None
+
+    def get_next_lesson_title(self, obj):
+        next_lesson = self._next_lesson(obj)
+        return next_lesson.title if next_lesson else None
+
+    def _next_chapter(self, obj):
+        return obj.chapter.next_chapters.filter(order__gt=0).order_by("order").first()
+
+    def get_next_chapter_slug(self, obj):
+        next_chapter = self._next_chapter(obj)
+        return next_chapter.slug if next_chapter else None
+
+    def get_next_chapter_name(self, obj):
         next_chapter = self._next_chapter(obj)
         return next_chapter.name if next_chapter else None
 

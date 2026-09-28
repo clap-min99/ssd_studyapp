@@ -6,6 +6,7 @@ import DigestDetail from "./pages/DigestDetail";
 // import Categories from './pages/Categories';
 import Chapters from "./pages/Chapters";
 import ChapterDetail from "./pages/ChapterDetail";
+import LessonDetail from "./pages/LessonDetail";
 import Glossary from "./pages/Glossary";
 import Review from "./pages/Review";
 import Login from "./pages/Login";
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/digest/:id" element={<DigestDetail />} />
           <Route path="/chapters" element={<Chapters />} />
           <Route path="/chapters/:slug" element={<ChapterDetail />} />
+          <Route path="/chapters/:slug/lessons/:lessonId" element={<LessonDetail />} />
           <Route path="/glossary" element={<Glossary />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/review" element={<Review onAnswered={() => setStreakVersion((v) => v + 1)} />} />

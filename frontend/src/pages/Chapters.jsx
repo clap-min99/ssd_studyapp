@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, CATEGORY_LABEL } from "../api/client";
+import { api } from "../api/client";
 
 const TRACKS = [
   { value: "ssd", label: "SSD/NAND" },
@@ -37,11 +37,8 @@ export default function Chapters() {
   return (
     <div>
       <h1>챕터</h1>
-      <p className="status-message">
-        {CATEGORY_LABEL[track]}를 순서대로 공부하는 커리큘럼이에요.
-      </p>
 
-      <div className="view-switcher">
+      <div className="view-switcher" style={{ marginTop: 12 }}>
         {TRACKS.map((t) => (
           <button
             key={t.value}
