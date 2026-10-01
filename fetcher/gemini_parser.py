@@ -1,6 +1,5 @@
 """
 다이제스트 메일 원문을 Gemini API(무료 티어)로 구조화하는 파서.
-llm_parser.py(Claude 버전)와 로직은 동일하고, 호출하는 API만 다르다.
 
 사전 준비:
     pip install google-genai python-dotenv

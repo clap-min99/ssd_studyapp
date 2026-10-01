@@ -3,7 +3,6 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import TodayFeed from "./pages/TodayFeed";
 import Timeline from "./pages/Timeline";
 import DigestDetail from "./pages/DigestDetail";
-// import Categories from './pages/Categories';
 import Chapters from "./pages/Chapters";
 import ChapterDetail from "./pages/ChapterDetail";
 import LessonDetail from "./pages/LessonDetail";
@@ -56,7 +55,6 @@ export default function App() {
           <Route path="/glossary" element={<Glossary />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/review" element={<Review onAnswered={() => setStreakVersion((v) => v + 1)} />} />
-          {/* <Route path="/categories" element={<Categories />} /> */}
         </Routes>
       </main>
 
