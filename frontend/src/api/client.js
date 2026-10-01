@@ -98,6 +98,21 @@ export const termApi = {
   getDetail: (id) => get(`/terms/${id}/`),
 };
 
+// 기사/학습 카드 심화 해설 — kind: "article" | "learning-item"
+export const deepDiveApi = {
+  generate: async (kind, id) => {
+    const res = await fetch(`${API_BASE}/deep-dive/${kind}/${id}/`, {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || "AI 해설 요청에 실패했어요.");
+    }
+    return res.json();
+  },
+};
+
 // 다이제스트별 내 생각 / 추가 질문
 export const noteApi = {
   getInsight: (digestId) => get(`/digests/${digestId}/insight/`),

@@ -228,6 +228,46 @@ def check_term_answer(term: str, meaning: str, relevance: str, user_answer: str)
     return json.loads(text)
 
 
+DEEP_DIVE_SYSTEM_PROMPT = """\
+너는 SSD/NAND 컨트롤러·자동차 SW 펌웨어 취업 준비생의 공부를 도와주는 선배 엔지니어다.
+
+다이제스트 메일 원문 전체와, 그 안의 항목 하나(기사 또는 학습 콘텐츠)가 주어진다.
+이 항목을 처음 보는 사람도 이해할 수 있게 마크다운으로 풀어서 설명하라.
+원문에 없는 사실을 지어내지 말고, 일반적인 배경지식은 배경지식이라고 구분해서 써라.
+
+아래 섹션을 이 순서대로, ## 헤딩으로 작성하라.
+
+## 쉽게 풀어보기
+원문 내용을 쉬운 말로 다시 설명. 비유가 도움이 되면 사용.
+
+## 알아야 할 배경지식
+이 내용을 이해하려면 먼저 알아야 하는 개념들을 짧게 설명.
+
+## 펌웨어 엔지니어 관점
+이게 실제 펌웨어 개발(FTL, GC, 큐 처리, AUTOSAR 등 해당되는 것)에 어떤 의미인지.
+
+## 더 공부할 거리
+키워드와 "무엇을 찾아보면 좋은지"를 3~5개 bullet로. 면접에서 나올 만한 질문 1~2개 포함.
+"""
+
+
+def explain_item(title: str, body: str, raw_text: str) -> str:
+    """카드 하나를 메일 원문 맥락과 함께 심화 해설(마크다운)로 풀어준다."""
+    client = _get_client()
+
+    prompt = (
+        f"[설명할 항목]\n제목: {title}\n내용: {body}\n\n"
+        f"[다이제스트 메일 원문 전체]\n{raw_text}"
+    )
+
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(system_instruction=DEEP_DIVE_SYSTEM_PROMPT),
+    )
+    return response.text.strip()
+
+
 if __name__ == "__main__":
     sample = """[2026-09-10] SSD/자동차 SW 펌웨어 데일리 브리핑
 

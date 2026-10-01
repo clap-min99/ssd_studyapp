@@ -32,6 +32,7 @@ class Article(models.Model):
     links = models.JSONField(default=list, blank=True)  # ["url1", "url2"]
     summary = models.TextField(blank=True)
     insight = models.TextField(blank=True)
+    deep_dive = models.TextField(blank=True)  # 카드 상세에서 Gemini가 만든 심화 해설 (한 번 만들면 캐시)
     category = models.CharField(max_length=20, choices=Category.choices)
     tags = models.ManyToManyField("Tag", blank=True) 
 
@@ -50,6 +51,7 @@ class LearningItem(models.Model):
     )
     heading = models.CharField(max_length=300)
     body = models.TextField()
+    deep_dive = models.TextField(blank=True)
     tags = models.ManyToManyField("Tag", blank=True)
 
     class Meta:

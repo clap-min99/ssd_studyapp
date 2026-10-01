@@ -161,6 +161,41 @@ class TermViewSet(
         return Response(result)
 
 
+class DeepDiveView(APIView):
+    """
+    POST /api/deep-dive/article/{id}/        -> 기사 카드 심화 해설 생성
+    POST /api/deep-dive/learning-item/{id}/  -> 학습 콘텐츠 카드 심화 해설 생성
+    -> { "deep_dive": "마크다운" }
+
+    한 번 만든 해설은 DB에 저장해두고 재사용한다 (Gemini 호출 비용 아끼기).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, kind, pk):
+        if kind == "article":
+            item = get_object_or_404(Article, pk=pk)
+            title, body = item.title, f"{item.summary}\n{item.insight}"
+        elif kind == "learning-item":
+            item = get_object_or_404(LearningItem, pk=pk)
+            title, body = item.heading, item.body
+        else:
+            return Response({"detail": "알 수 없는 종류입니다."}, status=404)
+
+        if not item.deep_dive:
+            from fetcher.gemini_parser import explain_item
+
+            try:
+                item.deep_dive = explain_item(title, body, item.digest.raw_text)
+            except Exception as e:
+                return Response(
+                    {"detail": f"AI 해설 생성 중 오류가 발생했습니다: {e}"}, status=502
+                )
+            item.save(update_fields=["deep_dive"])
+
+        return Response({"deep_dive": item.deep_dive})
+
+
 class DueReviewsView(APIView):
     """
     GET /api/review/due/ -> 로그인한 사용자가 오늘 복습해야 할 용어 목록

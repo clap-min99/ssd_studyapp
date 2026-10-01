@@ -2,11 +2,13 @@ import { useState } from "react";
 import { CATEGORY_BADGE_CLASS, CATEGORY_LABEL } from "../api/client";
 import TermDetail from "../components/TermDetail";
 import DigestNotes from "../components/DigestNotes";
+import ItemDetail from "../components/ItemDetail";
 
 /** 다이제스트 상세 데이터를 받아서 렌더링하는 공용 컴포넌트.
  *  TodayFeed(최신 1건)와 DigestDetail(타임라인에서 클릭한 특정 날짜)이 공유한다. */
 export default function DigestView({ digest }) {
   const [selectedTermId, setSelectedTermId] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null); // { kind, item }
 
   return (
     <div className="feed">
@@ -19,7 +21,11 @@ export default function DigestView({ digest }) {
         <section>
           <h2>기사</h2>
           {digest.articles.map((a) => (
-            <article key={a.id} className="card">
+            <article
+              key={a.id}
+              className="card clickable"
+              onClick={() => setSelectedItem({ kind: "article", item: a })}
+            >
               <span className={`badge ${CATEGORY_BADGE_CLASS[a.category] ?? ""}`}>
                 {CATEGORY_LABEL[a.category] ?? a.category}
               </span>
@@ -29,7 +35,13 @@ export default function DigestView({ digest }) {
               {a.links.length > 0 && (
                 <div className="links">
                   {a.links.map((link) => (
-                    <a key={link} href={link} target="_blank" rel="noreferrer">
+                    <a
+                      key={link}
+                      href={link}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       원문 링크
                     </a>
                   ))}
@@ -44,7 +56,11 @@ export default function DigestView({ digest }) {
         <section>
           <h2>오늘의 학습 콘텐츠</h2>
           {digest.learning_items.map((li) => (
-            <article key={li.id} className="card">
+            <article
+              key={li.id}
+              className="card clickable"
+              onClick={() => setSelectedItem({ kind: "learning-item", item: li })}
+            >
               <h3>{li.heading}</h3>
               <p>{li.body}</p>
             </article>
@@ -70,6 +86,14 @@ export default function DigestView({ digest }) {
 
       {selectedTermId && (
         <TermDetail termId={selectedTermId} onClose={() => setSelectedTermId(null)} />
+      )}
+
+      {selectedItem && (
+        <ItemDetail
+          {...selectedItem}
+          rawText={digest.raw_text}
+          onClose={() => setSelectedItem(null)}
+        />
       )}
 
       <DigestNotes digestId={digest.id} />
