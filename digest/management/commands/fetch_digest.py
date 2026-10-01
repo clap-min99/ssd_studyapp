@@ -94,6 +94,7 @@ class Command(BaseCommand):
                     summary=a.summary,
                     insight=a.insight,
                     category=a.category,
+                    source_text=a.source_text,
                 )
                 if a.tags:
                     article_obj.tags.set(Tag.objects.filter(slug__in=a.tags))
@@ -103,6 +104,7 @@ class Command(BaseCommand):
                     digest=digest_obj,
                     heading=li.heading,
                     body=li.body,
+                    source_text=li.source_text,
                 )
                 if li.tags:
                     li_obj.tags.set(Tag.objects.filter(slug__in=li.tags))

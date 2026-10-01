@@ -44,10 +44,15 @@ export default function ItemDetail({ kind, item, rawText, onClose }) {
         {error && <p className="status-message error">{error}</p>}
       </div>
 
-      {rawText && (
+      {(item.source_text || rawText) && (
         <details className="term-detail-block">
-          <summary className="term-detail-label">메일 원문 전체 보기</summary>
-          <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit" }}>{rawText}</pre>
+          <summary className="term-detail-label">
+            {/* source_text가 없는 예전 데이터는 메일 전체로 대체 */}
+            {item.source_text ? "메일 원문 보기" : "메일 원문 전체 보기"}
+          </summary>
+          <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit" }}>
+            {item.source_text || rawText}
+          </pre>
         </details>
       )}
     </Modal>

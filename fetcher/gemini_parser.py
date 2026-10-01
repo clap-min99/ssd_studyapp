@@ -47,14 +47,15 @@ SYSTEM_PROMPT = """\
       "summary": "요약 (원문 문장 그대로 복사하지 말고 핵심만)",
       "insight": "인사이트",
       "category": "ssd" 또는 "automotive",
-      "tags": ["slug1", "slug2"]
+      "tags": ["slug1", "slug2"],
+      "source_text": "메일 원문에서 이 기사에 해당하는 부분 (제목~인사이트까지, 글자 그대로 복사)"
     }
   ],
     }
   ],
   "no_article_categories": ["ssd", "automotive"],
     "learning_items": [
-    {"heading": "소제목", "body": "본문 내용 요약", "tags": ["slug1", "slug2"]}
+    {"heading": "소제목", "body": "본문 내용 요약", "tags": ["slug1", "slug2"], "source_text": "메일 원문에서 이 학습 콘텐츠에 해당하는 부분 (소제목~본문 끝까지, 글자 그대로 복사)"}
   ],
   "terms": [
     {"term": "용어", "meaning": "의미", "relevance": "펌웨어/개발과의 관련성 (있으면)"}
@@ -64,6 +65,7 @@ SYSTEM_PROMPT = """\
 규칙:
 - 기사가 없다고 명시된 카테고리는 "no_article_categories"에 넣고 articles에는 넣지 마라.
 - 기사에 링크가 여러 개(예: 배경 링크) 있으면 links 배열에 모두 넣어라.
+- source_text는 요약하거나 고치지 말고 원문 그대로 복사하라 (줄바꿈 포함).
 - 날짜는 메일 제목이나 본문에서 찾은 [YYYY-MM-DD] 형식을 사용하라. 못 찾으면 null.
 - tags는 아래 목록의 slug 중 기사 내용에 해당하는 것을 전부 골라라 (없으면 빈 배열).
 
@@ -81,6 +83,7 @@ class Article:
     insight: str = ""
     category: str = ""
     tags: list[str] = field(default_factory=list)
+    source_text: str = ""
 
 
 @dataclass
@@ -88,6 +91,7 @@ class LearningItem:
     heading: str
     body: str
     tags: list[str] = field(default_factory=list)
+    source_text: str = ""
 
 @dataclass
 class Term:

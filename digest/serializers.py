@@ -6,13 +6,13 @@ from .models import Article, DailyDigest, Insight, LearningItem, Lesson, Questio
 class ArticleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
-        fields = ["id", "title", "links", "summary", "insight", "category", "deep_dive"]
+        fields = ["id", "title", "links", "summary", "insight", "category", "source_text", "deep_dive"]
 
 
 class LearningItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = LearningItem
-        fields = ["id", "heading", "body", "deep_dive"]
+        fields = ["id", "heading", "body", "source_text", "deep_dive"]
 
 
 class DigestSummarySerializer(serializers.ModelSerializer):
