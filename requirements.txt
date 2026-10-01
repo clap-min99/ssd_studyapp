@@ -43,6 +43,6 @@ typing-inspection==0.4.2
 typing_extensions==4.16.0
 tzdata==2026.4
 uritemplate==4.2.0
-urllib3==2.6.3
+urllib3==2.8.0
 websockets==15.0.1
 whitenoise==6.12.0
