@@ -35,6 +35,11 @@ function authHeaders() {
 
 async function get(path) {
   const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() });
+  if (res.status === 401 && auth.isLoggedIn()) {
+    // 저장된 토큰이 서버에 없음(DB 변경·토큰 삭제 등) -> 로그아웃 후 로그인 화면으로
+    auth.logout();
+    window.location.reload();
+  }
   if (!res.ok) {
     throw new Error(`API 요청 실패: ${path} (${res.status})`);
   }
