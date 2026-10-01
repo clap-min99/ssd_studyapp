@@ -272,6 +272,30 @@ def explain_item(title: str, body: str, raw_text: str) -> str:
     return response.text.strip()
 
 
+def extract_sources(raw_text: str, titles: list[str]) -> list[str]:
+    """메일 원문에서 각 항목(제목 목록)에 해당하는 부분을 원문 그대로 잘라 같은 순서로 돌려준다.
+    이미 저장된 항목의 source_text를 채우는 백필용."""
+    client = _get_client()
+
+    numbered = "\n".join(f"{i}. {t}" for i, t in enumerate(titles))
+    prompt = (
+        "아래 메일 원문에서 각 항목에 해당하는 부분(제목~그 항목 내용 끝까지)을 "
+        "요약하거나 고치지 말고 줄바꿈까지 원문 그대로 잘라라. "
+        "항목 순서대로 문자열 JSON 배열로만 응답하라. 못 찾은 항목은 빈 문자열.\n\n"
+        f"[항목]\n{numbered}\n\n[메일 원문]\n{raw_text}"
+    )
+
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(response_mime_type="application/json"),
+    )
+    sources = json.loads(response.text)
+    if len(sources) != len(titles):
+        raise ValueError(f"항목 수 불일치: {len(titles)}개 요청, {len(sources)}개 응답")
+    return sources
+
+
 if __name__ == "__main__":
     sample = """[2026-09-10] SSD/자동차 SW 펌웨어 데일리 브리핑
 
