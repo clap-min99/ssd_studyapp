@@ -43,6 +43,10 @@ class Article(models.Model):
     def __str__(self) -> str:
         return f"[{self.get_category_display()}] {self.title}"
 
+    def explain_input(self) -> tuple[str, str]:
+        """AI 심화 해설에 넘길 (제목, 본문)."""
+        return self.title, f"{self.summary}\n{self.insight}"
+
 
 class LearningItem(models.Model):
     """기사가 없는 날 오는 보충 학습 콘텐츠, 또는 기사와 별개로 오는 개념 설명."""
@@ -61,6 +65,9 @@ class LearningItem(models.Model):
 
     def __str__(self) -> str:
         return self.heading
+
+    def explain_input(self) -> tuple[str, str]:
+        return self.heading, self.body
 
 
 class Term(models.Model):

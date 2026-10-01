@@ -7,6 +7,7 @@
     1. Gmail에서 최신 다이제스트 메일을 가져온다.
     2. Gemini로 구조화한다.
     3. DailyDigest / Article / LearningItem / Term 으로 DB에 저장한다.
+    3-1. 기사/학습 카드마다 AI 심화 해설을 미리 만들어 둔다 (실패해도 저장은 유지, 앱에서 버튼으로 재시도).
     4. 같은 날짜가 이미 저장돼 있으면 건너뛴다 (--force로 덮어쓰기 가능).
 """
 
@@ -18,7 +19,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from digest.models import Article, DailyDigest, LearningItem, Term, Tag
-from fetcher.gemini_parser import parse_digest_with_gemini
+from fetcher.gemini_parser import explain_item, parse_digest_with_gemini
 from fetcher.gmail_client import fetch_latest_digest
 
 
@@ -132,3 +133,16 @@ class Command(BaseCommand):
                 f"새 용어 {new_term_count}건 (중복 제외 총 {len(parsed.terms)}건 처리)"
             )
         )
+
+        # 트랜잭션 밖에서 처리 — 해설 생성이 실패해도 다이제스트는 이미 저장된 상태로 남는다.
+        items = [*digest_obj.articles.all(), *digest_obj.learning_items.all()]
+        for i, item in enumerate(items, 1):
+            try:
+                item.deep_dive = explain_item(*item.explain_input(), digest_obj.raw_text)
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"[{i}/{len(items)}] 해설 생성 실패: {str(e)[:200]}"))
+                if "RESOURCE_EXHAUSTED" in str(e):
+                    break  # 일일 한도 초과 — 나머지는 앱에서 버튼으로 생성
+                continue
+            item.save(update_fields=["deep_dive"])
+            self.stdout.write(f"[{i}/{len(items)}] 해설 생성: {str(item)[:40]}")

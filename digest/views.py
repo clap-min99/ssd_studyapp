@@ -175,10 +175,8 @@ class DeepDiveView(APIView):
     def post(self, request, kind, pk):
         if kind == "article":
             item = get_object_or_404(Article, pk=pk)
-            title, body = item.title, f"{item.summary}\n{item.insight}"
         elif kind == "learning-item":
             item = get_object_or_404(LearningItem, pk=pk)
-            title, body = item.heading, item.body
         else:
             return Response({"detail": "알 수 없는 종류입니다."}, status=404)
 
@@ -186,7 +184,7 @@ class DeepDiveView(APIView):
             from fetcher.gemini_parser import explain_item
 
             try:
-                item.deep_dive = explain_item(title, body, item.digest.raw_text)
+                item.deep_dive = explain_item(*item.explain_input(), item.digest.raw_text)
             except Exception as e:
                 return Response(
                     {"detail": f"AI 해설 생성 중 오류가 발생했습니다: {e}"}, status=502
