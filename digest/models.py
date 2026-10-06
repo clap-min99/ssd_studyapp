@@ -28,6 +28,7 @@ class Article(models.Model):
     digest = models.ForeignKey(
         DailyDigest, on_delete=models.CASCADE, related_name="articles"
     )
+    position = models.PositiveIntegerField()
     title = models.CharField(max_length=500)
     links = models.JSONField(default=list, blank=True)  # ["url1", "url2"]
     summary = models.TextField(blank=True)
@@ -38,7 +39,10 @@ class Article(models.Model):
     tags = models.ManyToManyField("Tag", blank=True) 
 
     class Meta:
-        ordering = ["digest__date"]
+        ordering = ["digest__date", "position"]
+        constraints = [
+            models.UniqueConstraint(fields=["digest", "position"], name="article_digest_position_unique"),
+        ]
 
     def __str__(self) -> str:
         return f"[{self.get_category_display()}] {self.title}"
@@ -54,6 +58,7 @@ class LearningItem(models.Model):
     digest = models.ForeignKey(
         DailyDigest, on_delete=models.CASCADE, related_name="learning_items"
     )
+    position = models.PositiveIntegerField()
     heading = models.CharField(max_length=300)
     body = models.TextField()
     source_text = models.TextField(blank=True)
@@ -61,7 +66,10 @@ class LearningItem(models.Model):
     tags = models.ManyToManyField("Tag", blank=True)
 
     class Meta:
-        ordering = ["digest__date"]
+        ordering = ["digest__date", "position"]
+        constraints = [
+            models.UniqueConstraint(fields=["digest", "position"], name="learningitem_digest_position_unique"),
+        ]
 
     def __str__(self) -> str:
         return self.heading

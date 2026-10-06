@@ -18,6 +18,8 @@ import json
 import os
 from dataclasses import dataclass, field
 
+from fetcher.source_order import order_from_source
+
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -51,8 +53,6 @@ SYSTEM_PROMPT = """\
       "source_text": "메일 원문에서 이 기사에 해당하는 부분 (제목~인사이트까지, 글자 그대로 복사)"
     }
   ],
-    }
-  ],
   "no_article_categories": ["ssd", "automotive"],
     "learning_items": [
     {"heading": "소제목", "body": "본문 내용 요약", "tags": ["slug1", "slug2"], "source_text": "메일 원문에서 이 학습 콘텐츠에 해당하는 부분 (소제목~본문 끝까지, 글자 그대로 복사)"}
@@ -63,6 +63,7 @@ SYSTEM_PROMPT = """\
 }
 
 규칙:
+- articles와 learning_items는 각각 메일 원문에 등장하는 순서를 그대로 유지하라. 카테고리/태그/중요도로 재정렬하지 마라.
 - 기사가 없다고 명시된 카테고리는 "no_article_categories"에 넣고 articles에는 넣지 마라.
 - 기사에 링크가 여러 개(예: 배경 링크) 있으면 links 배열에 모두 넣어라.
 - source_text는 요약하거나 고치지 말고 원문 그대로 복사하라 (줄바꿈 포함).
@@ -167,13 +168,16 @@ def parse_digest_with_gemini(raw_text: str) -> ParsedDigest:
 
     data = json.loads(text)
 
-    return ParsedDigest(
+    parsed = ParsedDigest(
         date=data.get("date"),
         articles=[Article(**_none_to_empty(a)) for a in data.get("articles", [])],
         learning_items=[LearningItem(**_none_to_empty(li)) for li in data.get("learning_items", [])],
         terms=[Term(**_none_to_empty(t)) for t in data.get("terms", [])],
         no_article_categories=data.get("no_article_categories", []),
     )
+    parsed.articles = order_from_source(raw_text, parsed.articles, "title")
+    parsed.learning_items = order_from_source(raw_text, parsed.learning_items, "heading")
+    return parsed
 
 
 ANSWER_CHECK_SYSTEM_PROMPT = """\

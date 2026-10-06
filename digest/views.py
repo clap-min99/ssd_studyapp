@@ -359,15 +359,15 @@ class TagArticlesView(generics.ListAPIView):
     serializer_class = ArticleSerializer
     permission_classes = [AllowAny]
     def get_queryset(self):
-        return Article.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date')
+        return Article.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date', 'position')
 
 class TagLearningItemsView(generics.ListAPIView):
     serializer_class = LearningItemSerializer
     permission_classes = [AllowAny]
     def get_queryset(self):
-        return LearningItem.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date')
+        return LearningItem.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date', 'position')
 
 class LearningItemListView(generics.ListAPIView):
-    queryset = LearningItem.objects.all().order_by('-digest__date')
+    queryset = LearningItem.objects.all().order_by('-digest__date', 'position')
     serializer_class = LearningItemSerializer
     permission_classes = [AllowAny]

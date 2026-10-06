@@ -64,7 +64,17 @@ class Command(BaseCommand):
 
         self.stdout.write(f"메일 발견: {digest_mail['subject']}")
         self.stdout.write("Gemini로 구조화 중...")
-        parsed = parse_digest_with_gemini(digest_mail["body"])
+        try:
+            parsed = parse_digest_with_gemini(digest_mail["body"])
+        except ValueError as exc:
+            raise CommandError(f"파싱/원문 순서 검증 실패 (DB 변경 없음): {exc}") from exc
+
+        for label, items, title_field in (
+            ("기사", parsed.articles, "title"),
+            ("학습콘텐츠", parsed.learning_items, "heading"),
+        ):
+            for position, item in enumerate(items, 1):
+                self.stdout.write(f"{label} position={position}: {getattr(item, title_field)}")
 
         if options["dry_run"]:
             self.stdout.write(self.style.SUCCESS("--dry-run: DB에 저장하지 않았습니다."))
@@ -87,9 +97,10 @@ class Command(BaseCommand):
                 digest_obj.articles.all().delete()
                 digest_obj.learning_items.all().delete()
 
-            for a in parsed.articles:
+            for position, a in enumerate(parsed.articles, 1):
                 article_obj = Article.objects.create(
                     digest=digest_obj,
+                    position=position,
                     title=a.title,
                     links=a.links,
                     summary=a.summary,
@@ -100,9 +111,10 @@ class Command(BaseCommand):
                 if a.tags:
                     article_obj.tags.set(Tag.objects.filter(slug__in=a.tags))
 
-            for li in parsed.learning_items:
+            for position, li in enumerate(parsed.learning_items, 1):
                 li_obj = LearningItem.objects.create(
                     digest=digest_obj,
+                    position=position,
                     heading=li.heading,
                     body=li.body,
                     source_text=li.source_text,
