@@ -4,7 +4,7 @@ import { auth, deepDiveApi } from "../api/client";
 import Modal from "./Modal";
 
 /** 기사/학습 카드를 눌렀을 때 뜨는 상세 팝업.
- *  카드 내용 + Gemini 심화 해설(한 번 만들면 서버에 저장됨) + 메일 원문 전체. */
+ *  카드 내용 + OpenAI 심화 해설(한 번 만들면 서버에 저장됨) + 메일 원문 전체. */
 export default function ItemDetail({ kind, item, rawText, onClose }) {
   const [deepDive, setDeepDive] = useState(item.deep_dive);
   const [loading, setLoading] = useState(false);

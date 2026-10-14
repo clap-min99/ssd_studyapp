@@ -4,6 +4,8 @@
 
 배포 절차와 과거 장애 기록이다. 기록의 버전·환경은 현재와 다를 수 있으므로 실제 설정 파일과 함께 확인한다.
 
+OpenAI API 키와 모델 전환 설정: [OpenAI 설정 문서](openai.md).
+
 ## 배포 (Google Cloud Run)
 
 ```bash
@@ -13,10 +15,10 @@ gcloud run deploy ssd-studyapp-api \
   --allow-unauthenticated \
   --max-instances=2 \
   --set-env-vars DJANGO_DEBUG=False,DJANGO_ADMIN_URL=<임의 문자열>/,DJANGO_ALLOWED_HOSTS=<서비스 URL>,CORS_EXTRA_ORIGINS=<Vercel 도메인> \
-  --set-secrets DJANGO_SECRET_KEY=django-secret-key:latest,DATABASE_URL=database-url:latest,GEMINI_API_KEY=gemini-api-key:latest
+  --set-secrets DJANGO_SECRET_KEY=django-secret-key:latest,DATABASE_URL=database-url:latest,OPENAI_API_KEY=openai-api-key:latest
 ```
 
-민감한 값(`DJANGO_SECRET_KEY`, `DATABASE_URL`, `GEMINI_API_KEY`)은 평문 대신
+민감한 값(`DJANGO_SECRET_KEY`, `DATABASE_URL`, `OPENAI_API_KEY`)은 평문 대신
 Secret Manager에 저장해서 참조. 필요한 IAM 권한 (프로젝트 번호는 예시):
 ```bash
 gcloud projects add-iam-policy-binding <project-id> \

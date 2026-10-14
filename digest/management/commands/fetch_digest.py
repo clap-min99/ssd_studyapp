@@ -5,7 +5,7 @@
 
 하는 일:
     1. Gmail에서 최신 다이제스트 메일을 가져온다.
-    2. Gemini로 구조화한다.
+    2. OpenAI로 구조화한다.
     3. DailyDigest / Article / LearningItem / Term 으로 DB에 저장한다.
     3-1. 기사/학습 카드마다 AI 심화 해설을 미리 만들어 둔다 (실패해도 저장은 유지, 앱에서 버튼으로 재시도).
     4. 같은 날짜가 이미 저장돼 있으면 건너뛴다 (--force로 덮어쓰기 가능).
@@ -17,9 +17,10 @@ from datetime import date as date_cls
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from openai import APIError, RateLimitError
 
 from digest.models import Article, DailyDigest, LearningItem, Term, Tag
-from fetcher.gemini_parser import explain_item, parse_digest_with_gemini
+from fetcher.openai_parser import explain_item, parse_digest
 from fetcher.gmail_client import fetch_latest_digest
 
 
@@ -80,11 +81,13 @@ class Command(BaseCommand):
             return
 
         self.stdout.write(f"메일 발견: {digest_mail['subject']}")
-        self.stdout.write("Gemini로 구조화 중...")
+        self.stdout.write("OpenAI로 구조화 중...")
         try:
-            parsed = parse_digest_with_gemini(digest_mail["body"])
+            parsed = parse_digest(digest_mail["body"])
         except ValueError as exc:
             raise CommandError(f"파싱/원문 순서 검증 실패 (DB 변경 없음): {exc}") from exc
+        except APIError as exc:
+            raise CommandError("OpenAI 요청 실패 (DB 변경 없음). API 키·모델 접근 권한·사용 한도와 API 상태를 확인하세요.") from exc
 
         for label, items, title_field in (
             ("기사", parsed.articles, "title"),
@@ -170,8 +173,8 @@ class Command(BaseCommand):
                 item.deep_dive = explain_item(*item.explain_input(), digest_obj.raw_text)
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"[{i}/{len(items)}] 해설 생성 실패: {str(e)[:200]}"))
-                if "RESOURCE_EXHAUSTED" in str(e):
-                    break  # 일일 한도 초과 — 나머지는 앱에서 버튼으로 생성
+                if isinstance(e, RateLimitError):
+                    break  # 사용 한도 오류 — 나머지는 앱에서 버튼으로 생성
                 continue
             item.save(update_fields=["deep_dive"])
             self.stdout.write(f"[{i}/{len(items)}] 해설 생성: {str(item)[:40]}")

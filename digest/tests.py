@@ -1,6 +1,5 @@
 import base64
 import importlib
-import json
 from io import StringIO
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -14,7 +13,7 @@ from rest_framework.test import APIClient
 
 from digest.models import Article, DailyDigest, LearningItem, Tag
 from digest.serializers import DailyDigestDetailSerializer
-from fetcher.gemini_parser import parse_digest_with_gemini
+from fetcher.openai_parser import parse_digest
 from fetcher.gmail_client import _decode_body
 from fetcher.source_order import order_from_source, source_offset
 
@@ -34,9 +33,11 @@ def mail_and_response(count=6, articles=True):
     return mail, response
 
 
-def gemini_client(response):
+def openai_client(response):
     client = Mock()
-    client.models.generate_content.return_value.text = json.dumps(response)
+    from fetcher.ai_schemas import DigestOutput
+    client.responses.parse.return_value.status = "completed"
+    client.responses.parse.return_value.output_parsed = DigestOutput.model_validate(response)
     return client
 
 
@@ -47,12 +48,12 @@ class SourceOrderTests(SimpleTestCase):
         payload = {"parts": [{"mimeType": "text/plain", "body": {"data": encoded}}]}
         self.assertEqual(_decode_body(payload), mail["body"])
 
-    def test_gemini_rotation_restored_for_variable_counts(self):
+    def test_openai_rotation_restored_for_variable_counts(self):
         for count in (2, 3, 6):
             with self.subTest(count=count):
                 mail, response = mail_and_response(count)
-                with patch("fetcher.gemini_parser._get_client", return_value=gemini_client(response)):
-                    parsed = parse_digest_with_gemini(mail["body"])
+                with patch("fetcher.openai_parser._get_client", return_value=openai_client(response)):
+                    parsed = parse_digest(mail["body"])
                 self.assertEqual([item.heading for item in parsed.learning_items], HEADINGS[:count])
                 self.assertEqual([item.title for item in parsed.articles], ["기사 1", "기사 2"])
 
@@ -77,7 +78,7 @@ class DigestOrderTests(TestCase):
     def fetch(self, count=6, articles=True, **options):
         mail, response = mail_and_response(count, articles)
         with patch("digest.management.commands.fetch_digest.fetch_latest_digest", return_value=mail), \
-             patch("fetcher.gemini_parser._get_client", return_value=gemini_client(response)), \
+             patch("fetcher.openai_parser._get_client", return_value=openai_client(response)), \
              patch("digest.management.commands.fetch_digest.explain_item", return_value="해설"):
             output = StringIO()
             call_command("fetch_digest", stdout=output, **options)
@@ -119,7 +120,7 @@ class DigestOrderTests(TestCase):
         mail, response = mail_and_response()
         response["learning_items"][0].update(heading="없는 항목", source_text="없는 원문")
         with patch("digest.management.commands.fetch_digest.fetch_latest_digest", return_value=mail), \
-             patch("fetcher.gemini_parser._get_client", return_value=gemini_client(response)):
+             patch("fetcher.openai_parser._get_client", return_value=openai_client(response)):
             with self.assertRaises(CommandError):
                 call_command("fetch_digest", force=True, stdout=StringIO())
         self.assert_feed(DailyDigest.objects.get(), 6)

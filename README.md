@@ -29,10 +29,10 @@ SSD/NAND 컨트롤러 펌웨어 및 자동차 SW 취업 준비를 위한 개인 
 flowchart TD
     Mail[외부 다이제스트 메일 → Gmail] --> Gmail[Gmail API: 대상 메일 조회]
     Actions[GitHub Actions: 정기 실행 또는 날짜 지정] --> Gmail
-    Gmail --> Gemini[Gemini: 기사·학습 콘텐츠·용어 구조화 및 태그 분류]
-    Gemini --> Save[Django: 원문·구조화 데이터 저장]
+    Gmail --> OpenAI[OpenAI: 기사·학습 콘텐츠·용어 구조화 및 태그 분류]
+    OpenAI --> Save[Django: 원문·구조화 데이터 저장]
     Save --> DB[(Supabase PostgreSQL)]
-    Save --> Explain[Gemini: 심화 해설 생성]
+    Save --> Explain[OpenAI: 심화 해설 생성]
     Explain --> DB
 ```
 
@@ -49,7 +49,7 @@ flowchart LR
     Web --> Learn[피드 · 타임라인 · 용어 · 챕터/레슨]
     Web --> Review[서술형·객관식 복습]
     Review --> API
-    API --> AI[Gemini: 서술형 답변 첨삭]
+    API --> AI[OpenAI: 서술형 답변 첨삭]
 ```
 
 일별 콘텐츠와 미리 작성한 커리큘럼을 태그로 연결.
@@ -88,7 +88,7 @@ flowchart LR
 ## 주요 설계 결정
 
 - **LLM 기반 구조화**: 가변적인 메일 형식에 대응하기 위해 기사·학습 콘텐츠·용어를 LLM으로 추출하고 원문 보관.
-  파싱 구현 위치: `fetcher/gemini_parser.py`.
+  파싱 구현 위치: `fetcher/openai_parser.py`.
 - **태그 기반 학습 연결**: 기사와 용어를 주제로 묶고, 학습 순서가 있는 태그를 챕터로 확장해 뉴스와 커리큘럼 연결.
 - **사전 작성 레슨**: 검토한 콘텐츠를 시드로 관리하고, Markdown과 인라인 SVG로 설명과 도식 제공.
 - **PC와 독립적인 수집**: GitHub Actions에서 정기 수집 실행. API는 Cloud Run, 프론트엔드는 Vercel에서 제공.
@@ -102,7 +102,7 @@ flowchart LR
 | 프론트엔드 | React, Vite, React Router, CSS, marked |
 | 백엔드·인증 | Django, Django REST Framework, TokenAuthentication |
 | 데이터베이스 | Supabase PostgreSQL, 로컬 SQLite 지원 |
-| 메일·AI | Gmail API(OAuth 2.0), Gemini API |
+| 메일·AI | Gmail API(OAuth 2.0), OpenAI API |
 | 수집 자동화 | GitHub Actions |
 | 배포 | Vercel, Google Cloud Run, Artifact Registry, Cloud Build |
 
@@ -123,7 +123,8 @@ DJANGO_SECRET_KEY=local-development-key
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,testserver
 DATABASE_URL=sqlite:///db.sqlite3
-GEMINI_API_KEY=your-gemini-api-key
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-5.4-mini
 ```
 
 - **DB 설정**: `DATABASE_URL` 생략 시 SQLite 사용. Supabase 주소 설정 시 로컬 명령도 해당 DB에 반영되므로 개발용 DB와 서비스 DB 구분 필요.
@@ -160,11 +161,19 @@ npm run dev
 - **기본 API 주소**: `http://127.0.0.1:8000/api`.
 - **다른 백엔드 연결**: `frontend/.env`에 `VITE_API_BASE` 설정.
 
+## AI 모델 설정
+
+기본 모델: `gpt-5.4-mini`. 루트 `.env`의 `OPENAI_API_KEY`와 `OPENAI_MODEL`로 설정.
+메일 구조화·심화 해설·서술형 첨삭·태그 분류에 공통 적용.
+기능별 모델을 따로 설정할 수 있으며, 기존 DB와 Gmail 인증은 그대로 사용.
+
+로컬·GitHub Actions·Cloud Run의 키 등록과 모델 설정: [OpenAI 설정 문서](docs/openai.md).
+
 ## 자동화와 누락 날짜 복구
 
 - **정기 실행**: [수집 워크플로](.github/workflows/fetch_digest.yml)에서 KST 05:00~06:45 사이 15분 간격 실행.
 - **기본 수집 대상**: 최근 메일 중 최신 다이제스트.
-- **일시적 오류 대응**: Gemini의 500·502·503·504 응답에 대해 클라이언트에서 20초 간격 재시도.
+- **일시적 오류 대응**: OpenAI SDK에서 일시적 연결·서버·요청 제한 오류를 최대 2회 재시도.
 
 **누락 날짜 복구는 날짜를 직접 지정하는 방식.** 과거 누락분의 일괄 자동 복구는 미지원.
 
@@ -182,7 +191,7 @@ python manage.py fetch_digest --force             # 선택된 날짜의 기존 �
 ```
 
 - **중복 저장 방지**: 이미 저장된 날짜는 기본적으로 건너뛰며, 누락 날짜 복구에는 `--force` 불필요.
-- **미리보기 범위**: `--dry-run`은 DB 저장만 생략하며 Gmail 및 Gemini API 호출 포함.
+- **미리보기 범위**: `--dry-run`은 DB 저장만 생략하며 Gmail 및 OpenAI API 호출 포함.
 
 Actions 실행에 필요한 GitHub Secrets. 로컬 인증 파일과 별도 관리.
 
@@ -190,7 +199,7 @@ Actions 실행에 필요한 GitHub Secrets. 로컬 인증 파일과 별도 관�
 |---|---|
 | `GMAIL_CREDENTIALS_JSON` | Gmail OAuth 클라이언트 JSON |
 | `GMAIL_TOKEN_JSON` | Gmail 접근 토큰 및 갱신 정보 |
-| `GEMINI_API_KEY` | 구조화·해설 생성 API 인증 |
+| `OPENAI_API_KEY` | 구조화·해설 생성 API 인증 |
 | `DATABASE_URL` | 저장 대상 DB 연결 |
 | `DJANGO_SECRET_KEY` | Django 실행 설정 |
 
@@ -203,7 +212,7 @@ ssd_studyapp/
 ├── config/                  # Django 설정·URL
 ├── digest/                  # 데이터 모델·REST API·관리 명령
 │   └── management/commands/ # 수집 및 커리큘럼 시드
-├── fetcher/                 # Gmail 수집·Gemini 파싱·원문 순서 처리
+├── fetcher/                 # Gmail 수집·OpenAI 파싱·원문 순서 처리
 ├── frontend/src/            # React 화면·컴포넌트·API 클라이언트
 ├── .github/workflows/       # 수집 자동화
 ├── cloudbuild.yaml          # 백엔드 빌드·배포

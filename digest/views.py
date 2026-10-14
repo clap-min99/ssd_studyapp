@@ -150,7 +150,7 @@ class TermViewSet(
     """
     GET /api/terms/                -> 전체 용어 사전 (로그인 시 my_familiarity 포함)
     GET /api/terms/{id}/           -> 상세 (관련 기사 목록 포함)
-    POST /api/terms/{id}/check_answer/  -> 서술형 답변을 Gemini로 첨삭 — 로그인 필요
+    POST /api/terms/{id}/check_answer/  -> 서술형 답변을 OpenAI로 첨삭 — 로그인 필요
 
     자기 채점(familiarity)은 이제 여기가 아니라 /api/review/ 쪽에서 처리한다
     (유저별로 기록해야 해서 Term 자체를 수정하는 방식이 더 이상 맞지 않는다).
@@ -176,8 +176,8 @@ class TermViewSet(
         if not user_answer:
             return Response({"detail": "answer 값이 비어있습니다."}, status=400)
 
-        # 무거운 의존성(google-genai)은 이 액션을 쓸 때만 로드한다
-        from fetcher.gemini_parser import check_term_answer
+        # 무거운 의존성(openai)은 이 액션을 쓸 때만 로드한다
+        from fetcher.openai_parser import check_term_answer
 
         try:
             result = check_term_answer(
@@ -200,7 +200,7 @@ class DeepDiveView(APIView):
     POST /api/deep-dive/learning-item/{id}/  -> 학습 콘텐츠 카드 심화 해설 생성
     -> { "deep_dive": "마크다운" }
 
-    한 번 만든 해설은 DB에 저장해두고 재사용한다 (Gemini 호출 비용 아끼기).
+    한 번 만든 해설은 DB에 저장해두고 재사용한다 (OpenAI 호출 비용 아끼기).
     """
 
     permission_classes = [IsAuthenticated]
@@ -214,7 +214,7 @@ class DeepDiveView(APIView):
             return Response({"detail": "알 수 없는 종류입니다."}, status=404)
 
         if not item.deep_dive:
-            from fetcher.gemini_parser import explain_item
+            from fetcher.openai_parser import explain_item
 
             try:
                 item.deep_dive = explain_item(*item.explain_input(), item.digest.raw_text)

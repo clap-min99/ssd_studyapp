@@ -1,10 +1,11 @@
 import time
+from openai import RateLimitError
 
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from digest.models import DailyDigest
-from fetcher.gemini_parser import extract_sources
+from fetcher.openai_parser import extract_sources
 
 
 class Command(BaseCommand):
@@ -23,8 +24,8 @@ class Command(BaseCommand):
             try:
                 sources = extract_sources(d.raw_text, titles)
             except Exception as e:
-                if "RESOURCE_EXHAUSTED" in str(e):
-                    self.stdout.write(self.style.WARNING("Gemini 일일 한도 초과 — 내일 다시 실행하면 남은 것부터 이어서 채운다."))
+                if isinstance(e, RateLimitError):
+                    self.stdout.write(self.style.WARNING("OpenAI 사용 한도 오류 — 결제·요청 한도를 확인한 뒤 다시 실행하면 남은 것부터 처리합니다."))
                     return
                 self.stdout.write(self.style.WARNING(f"[{i}/{total}] {d.date} 실패: {str(e)[:200]}"))
                 continue

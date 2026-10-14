@@ -3,11 +3,11 @@ import time
 from django.core.management.base import BaseCommand
 
 from digest.models import Article, Tag
-from fetcher.gemini_parser import tag_article
+from fetcher.openai_parser import tag_article
 
 
 class Command(BaseCommand):
-    help = "태그가 비어있는 기존 기사에 Gemini로 태그를 채운다 (1회성 백필)."
+    help = "태그가 비어있는 기존 기사에 OpenAI로 태그를 채운다 (1회성 백필)."
 
     def handle(self, *args, **kwargs):
         articles = Article.objects.filter(tags__isnull=True)

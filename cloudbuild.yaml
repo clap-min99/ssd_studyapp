@@ -1,6 +1,13 @@
 options:
   logging: CLOUD_LOGGING_ONLY
 
+substitutions:
+  _OPENAI_MODEL: gpt-5.4-mini
+  _OPENAI_PARSE_MODEL: ''
+  _OPENAI_EXPLAIN_MODEL: ''
+  _OPENAI_REVIEW_MODEL: ''
+  _OPENAI_TAG_MODEL: ''
+
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/ssd-studyapp-api', '.']
@@ -16,7 +23,7 @@ steps:
       - --region=asia-south1
       - --allow-unauthenticated
       - --max-instances=2
-      - --set-env-vars=DJANGO_DEBUG=False,DJANGO_ADMIN_URL=xk29-panel/,DJANGO_ALLOWED_HOSTS=ssd-studyapp-api-80165171345.asia-south1.run.app,CORS_EXTRA_ORIGINS=https://ssd-studyapp.vercel.app
-      - --set-secrets=DJANGO_SECRET_KEY=django-secret-key:latest,DATABASE_URL=database-url:latest,GEMINI_API_KEY=gemini-api-key:latest
+      - --set-env-vars=DJANGO_DEBUG=False,DJANGO_ADMIN_URL=xk29-panel/,DJANGO_ALLOWED_HOSTS=ssd-studyapp-api-80165171345.asia-south1.run.app,CORS_EXTRA_ORIGINS=https://ssd-studyapp.vercel.app,OPENAI_MODEL=${_OPENAI_MODEL},OPENAI_PARSE_MODEL=${_OPENAI_PARSE_MODEL},OPENAI_EXPLAIN_MODEL=${_OPENAI_EXPLAIN_MODEL},OPENAI_REVIEW_MODEL=${_OPENAI_REVIEW_MODEL},OPENAI_TAG_MODEL=${_OPENAI_TAG_MODEL}
+      - --set-secrets=DJANGO_SECRET_KEY=django-secret-key:latest,DATABASE_URL=database-url:latest,OPENAI_API_KEY=openai-api-key:latest
 images:
   - 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/ssd-studyapp-api'

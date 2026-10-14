@@ -1,17 +1,17 @@
 import time
 
 from django.core.management.base import BaseCommand
-from google.genai.errors import ClientError
+from openai import RateLimitError
 
 from digest.models import Tag, Term
-from fetcher.gemini_parser import tag_term
+from fetcher.openai_parser import tag_term
 
-# 무료 티어 분당 5회 한도 — 여유 있게 13초 간격
-REQUEST_INTERVAL_SECONDS = 13
+# 백필 요청 사이 간격. 일시적 오류 재시도는 OpenAI SDK에서도 처리.
+REQUEST_INTERVAL_SECONDS = 1
 
 
 class Command(BaseCommand):
-    help = "태그가 비어있는 기존 용어에 Gemini로 태그(챕터)를 채운다 (1회성 백필)."
+    help = "태그가 비어있는 기존 용어에 OpenAI로 태그(챕터)를 채운다 (1회성 백필)."
 
     def handle(self, *args, **kwargs):
         terms = list(Term.objects.filter(tags__isnull=True))
@@ -23,8 +23,8 @@ class Command(BaseCommand):
                 try:
                     slugs = tag_term(t.term, t.meaning, t.relevance)
                     break
-                except ClientError as e:
-                    if e.code == 429 and attempt < 2:
+                except RateLimitError as e:
+                    if e.code != "insufficient_quota" and attempt < 2:
                         self.stdout.write(self.style.WARNING(f"레이트리밋, 60초 대기 후 재시도"))
                         time.sleep(60)
                     else:

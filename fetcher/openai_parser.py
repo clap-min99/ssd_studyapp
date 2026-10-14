@@ -1,35 +1,31 @@
-"""
-다이제스트 메일 원문을 Gemini API(무료 티어)로 구조화하는 파서.
+"""OpenAI Responses API를 사용하는 메일 파싱·해설·첨삭·태그 분류 모듈.
 
-사전 준비:
-    pip install google-genai python-dotenv
-    https://aistudio.google.com/apikey 에서 무료 API 키 발급 (카드 등록 불필요)
-    .env 파일에 추가:
-        GEMINI_API_KEY=여기에-키
-
-무료 티어 한도(2026-09 기준, 모델에 따라 달라질 수 있음):
-    분당 요청 수, 일일 요청 수 제한이 있지만 "하루 1회 파싱" 용도로는 충분히 넉넉함.
-    한도를 초과하면 google.genai가 예외를 던지므로 다음날 다시 시도하면 됨.
+OPENAI_API_KEY 필수. OPENAI_MODEL로 기본 모델 지정 (기본 gpt-5.4-mini).
+기능별 OPENAI_PARSE_MODEL / OPENAI_EXPLAIN_MODEL / OPENAI_REVIEW_MODEL /
+OPENAI_TAG_MODEL 설정은 기본 모델보다 우선 적용.
 """
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass, field
 
 from fetcher.source_order import order_from_source
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from openai import OpenAI
+
+from fetcher.ai_schemas import AnswerOutput, DigestOutput, SourcesOutput, TagsOutput
 
 load_dotenv()
 
-# 무료 티어에서 넉넉하게 제공되는 모델. 만약 이 모델명이 만료/변경되었다는
-# 오류가 나면 https://aistudio.google.com 에서 현재 사용 가능한 모델명을 확인해서
-# 아래 MODEL 값만 바꿔주면 된다.
-MODEL = "gemini-3.6-flash"
+DEFAULT_MODEL = "gpt-5.4-mini"
+
+
+def get_model(task: str) -> str:
+    return (os.environ.get(f"OPENAI_{task.upper()}_MODEL", "").strip()
+            or os.environ.get("OPENAI_MODEL", "").strip() or DEFAULT_MODEL)
+
 
 SYSTEM_PROMPT = """\
 너는 SSD/NAND 컨트롤러 펌웨어 및 자동차 SW 취업 준비를 위한 데일리 뉴스 \
@@ -110,23 +106,25 @@ class ParsedDigest:
     no_article_categories: list[str] = field(default_factory=list)
 
 
-def _get_client() -> genai.Client:
-    return genai.Client(
-        api_key=os.environ["GEMINI_API_KEY"],
-        http_options=types.HttpOptions(
-            retry_options=types.HttpRetryOptions(
-                attempts=5,
-                initial_delay=20.0,
-                max_delay=20.0,
-                exp_base=1,
-                http_status_codes=[500, 502, 503, 504],
-            ),
-        ),
+def _get_client() -> OpenAI:
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not key:
+        raise ValueError("OPENAI_API_KEY가 설정되지 않았습니다. .env 또는 실행 환경의 Secret을 확인하세요.")
+    return OpenAI(api_key=key, timeout=30.0, max_retries=2)
+
+
+def _generate_json(prompt: str, schema, task: str, instructions: str = "") -> dict:
+    response = _get_client().responses.parse(
+        model=get_model(task), instructions=instructions,
+        input=prompt, text_format=schema, store=False,
     )
+    if response.status != "completed" or response.output_parsed is None:
+        raise ValueError("OpenAI가 유효한 구조화 결과를 반환하지 않았습니다 (거절 또는 응답 미완료).")
+    return response.output_parsed.model_dump()
 
 
 def _none_to_empty(d: dict) -> dict:
-    """Gemini가 선택 필드에 값 대신 null을 줄 때가 있어서, None을 정리한다.
+    """OpenAI가 선택 필드에 값 대신 null을 줄 때가 있어서, None을 정리한다.
     (DB의 TextField는 NULL을 허용하지 않는데, dataclass 기본값 ""는 명시적 None이
     들어오면 무시되고 그대로 None이 통과해버리는 문제가 있었다.)
     "links"만 리스트 필드라 None이면 빈 리스트로, 나머지는 빈 문자열로 채운다.
@@ -142,31 +140,10 @@ def _none_to_empty(d: dict) -> dict:
     return cleaned
 
 
-def parse_digest_with_gemini(raw_text: str) -> ParsedDigest:
-    """다이제스트 원문을 Gemini API로 구조화한다."""
+def parse_digest(raw_text: str) -> ParsedDigest:
+    """다이제스트 원문을 OpenAI API로 구조화한다."""
 
-    client = _get_client()
-
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=raw_text,
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            response_mime_type="application/json",
-        ),
-    )
-
-    text = response.text.strip()
-
-    # response_mime_type="application/json" 덕분에 보통은 순수 JSON만 오지만,
-    # 혹시 모를 코드펜스에 대비한 방어 코드
-    if text.startswith("```"):
-        text = text.strip("`")
-        if text.startswith("json"):
-            text = text[4:]
-        text = text.strip()
-
-    data = json.loads(text)
+    data = _generate_json(raw_text, DigestOutput, "parse", SYSTEM_PROMPT)
 
     parsed = ParsedDigest(
         date=data.get("date"),
@@ -203,13 +180,11 @@ ANSWER_CHECK_SYSTEM_PROMPT = """\
 
 
 def check_term_answer(term: str, meaning: str, relevance: str, user_answer: str) -> dict:
-    """사용자가 직접 쓴 용어 설명을 Gemini로 채점한다.
+    """사용자가 직접 쓴 용어 설명을 OpenAI로 채점한다.
 
     Returns:
         {"verdict": "correct" | "partial" | "wrong", "feedback": "..."}
     """
-    client = _get_client()
-
     prompt = (
         f"용어: {term}\n"
         f"정답 의미: {meaning}\n"
@@ -217,23 +192,7 @@ def check_term_answer(term: str, meaning: str, relevance: str, user_answer: str)
         f"사용자의 설명: {user_answer}"
     )
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=ANSWER_CHECK_SYSTEM_PROMPT,
-            response_mime_type="application/json",
-        ),
-    )
-
-    text = response.text.strip()
-    if text.startswith("```"):
-        text = text.strip("`")
-        if text.startswith("json"):
-            text = text[4:]
-        text = text.strip()
-
-    return json.loads(text)
+    return _generate_json(prompt, AnswerOutput, "review", ANSWER_CHECK_SYSTEM_PROMPT)
 
 
 DEEP_DIVE_SYSTEM_PROMPT = """\
@@ -261,40 +220,33 @@ DEEP_DIVE_SYSTEM_PROMPT = """\
 
 def explain_item(title: str, body: str, raw_text: str) -> str:
     """카드 하나를 메일 원문 맥락과 함께 심화 해설(마크다운)로 풀어준다."""
-    client = _get_client()
-
     prompt = (
         f"[설명할 항목]\n제목: {title}\n내용: {body}\n\n"
         f"[다이제스트 메일 원문 전체]\n{raw_text}"
     )
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(system_instruction=DEEP_DIVE_SYSTEM_PROMPT),
+    response = _get_client().responses.create(
+        model=get_model("explain"), instructions=DEEP_DIVE_SYSTEM_PROMPT,
+        input=prompt, store=False,
     )
-    return response.text.strip()
+    text = response.output_text.strip()
+    if response.status != "completed" or not text:
+        raise ValueError("OpenAI 해설 생성 결과가 비어 있거나 완료되지 않았습니다.")
+    return text
 
 
 def extract_sources(raw_text: str, titles: list[str]) -> list[str]:
     """메일 원문에서 각 항목(제목 목록)에 해당하는 부분을 원문 그대로 잘라 같은 순서로 돌려준다.
     이미 저장된 항목의 source_text를 채우는 백필용."""
-    client = _get_client()
-
     numbered = "\n".join(f"{i}. {t}" for i, t in enumerate(titles))
     prompt = (
         "아래 메일 원문에서 각 항목에 해당하는 부분(제목~그 항목 내용 끝까지)을 "
         "요약하거나 고치지 말고 줄바꿈까지 원문 그대로 잘라라. "
-        "항목 순서대로 문자열 JSON 배열로만 응답하라. 못 찾은 항목은 빈 문자열.\n\n"
+        "sources 필드에 항목 순서대로 문자열 배열을 담은 JSON 객체로 응답하라. 못 찾은 항목은 빈 문자열.\n\n"
         f"[항목]\n{numbered}\n\n[메일 원문]\n{raw_text}"
     )
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json"),
-    )
-    sources = json.loads(response.text)
+    sources = _generate_json(prompt, SourcesOutput, "parse")["sources"]
     if len(sources) != len(titles):
         raise ValueError(f"항목 수 불일치: {len(titles)}개 요청, {len(sources)}개 응답")
     return sources
@@ -313,13 +265,13 @@ if __name__ == "__main__":
 NVMe는 호스트와 SSD 사이에 Submission Queue(SQ)와 Completion Queue(CQ)를 두고
 커맨드를 비동기로 처리한다...
 """
-    parsed = parse_digest_with_gemini(sample)
+    parsed = parse_digest(sample)
     print(f"날짜: {parsed.date}")
     print(f"기사 {len(parsed.articles)}건, 학습콘텐츠 {len(parsed.learning_items)}건, 용어 {len(parsed.terms)}건")
     print(f"기사 없음 카테고리: {parsed.no_article_categories}")
     for li in parsed.learning_items:
         print(" -", li.heading)
-        
+
 
 
 
@@ -342,26 +294,9 @@ TAG_SYSTEM_PROMPT = """\
 
 def tag_article(title: str, summary: str, category: str) -> list[str]:
     """기존 기사(제목/요약)를 보고 알맞은 태그 slug 목록을 고른다. 백필용."""
-    client = _get_client()
     prompt = f"제목: {title}\n요약: {summary}\n카테고리: {category}"
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=TAG_SYSTEM_PROMPT,
-            response_mime_type="application/json",
-        ),
-    )
-
-    text = response.text.strip()
-    if text.startswith("```"):
-        text = text.strip("`")
-        if text.startswith("json"):
-            text = text[4:]
-        text = text.strip()
-
-    return json.loads(text).get("tags", [])
+    return _generate_json(prompt, TagsOutput, "tag", TAG_SYSTEM_PROMPT)["tags"]
 
 
 TERM_TAG_SYSTEM_PROMPT = """\
@@ -383,23 +318,6 @@ TERM_TAG_SYSTEM_PROMPT = """\
 
 def tag_term(term: str, meaning: str, relevance: str = "") -> list[str]:
     """용어 사전 항목(용어/뜻풀이)을 보고 알맞은 태그 slug 목록을 고른다. 백필용."""
-    client = _get_client()
     prompt = f"용어: {term}\n뜻풀이: {meaning}\n실무 연관성: {relevance}"
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=TERM_TAG_SYSTEM_PROMPT,
-            response_mime_type="application/json",
-        ),
-    )
-
-    text = response.text.strip()
-    if text.startswith("```"):
-        text = text.strip("`")
-        if text.startswith("json"):
-            text = text[4:]
-        text = text.strip()
-
-    return json.loads(text).get("tags", [])
+    return _generate_json(prompt, TagsOutput, "tag", TERM_TAG_SYSTEM_PROMPT)["tags"]
