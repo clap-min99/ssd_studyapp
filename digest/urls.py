@@ -1,5 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
+from .review_sessions import ReviewSessionView
 
 from .views import (
     DailyDigestViewSet,
@@ -32,6 +33,7 @@ urlpatterns = [
     path("auth/signup/", SignupView.as_view(), name="signup"),
     path("auth/account/", AccountView.as_view(), name="account"),
     path("review/due/", DueReviewsView.as_view(), name="review-due"),
+    path("review/session/", ReviewSessionView.as_view(), name="review-session"),
     path("review/streak/", StreakView.as_view(), name="review-streak"),
     path("review/<int:term_id>/answer/", SubmitReviewAnswerView.as_view(), name="review-answer"),
     path("tags/", TagListView.as_view(), name="tag-list"),                              # 추가

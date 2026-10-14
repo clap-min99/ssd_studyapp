@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import DailyActivity, DailyDigest, Insight, Lesson, Question, ReviewRecord, Term, Tag, Article, LearningItem
+from .models import ReviewSession
 from .serializers import (
     DailyDigestDetailSerializer,
     DailyDigestListSerializer,
@@ -272,16 +273,33 @@ class SubmitReviewAnswerView(APIView):
         serializer.is_valid(raise_exception=True)
         familiarity = serializer.validated_data["familiarity"]
 
-        record, _ = ReviewRecord.objects.get_or_create(
-            user=request.user,
-            term=term,
-            defaults={"next_review_date": timezone.localdate()},
-        )
-        record.apply_answer(familiarity)
-        record.save()
+        with transaction.atomic():
+            get_user_model().objects.select_for_update().get(pk=request.user.pk)
+            session = None
+            session_id = serializer.validated_data.get("session_id")
+            if session_id:
+                session = get_object_or_404(ReviewSession, pk=session_id, user=request.user)
+                if session.date != timezone.localdate():
+                    return Response({"detail": "날짜가 바뀌었어요. 오늘의 복습을 다시 시작해 주세요."}, status=400)
+                latest = ReviewSession.objects.filter(user=request.user, date=session.date).first()
+                if latest.pk != session.pk:
+                    return Response({"detail": "다른 복습을 시작했어요. 화면을 새로고침해 주세요."}, status=400)
+                if term.pk not in session.term_ids:
+                    return Response({"detail": "이 복습에 포함되지 않은 용어입니다."}, status=400)
+                if term.pk in session.completed_ids:
+                    return Response({"detail": "이미 저장된 답변입니다."})
 
-        # 스트릭 계산용 — 오늘 활동했다는 사실을 기록 (이미 있으면 중복 생성 안 함)
-        DailyActivity.objects.get_or_create(user=request.user, date=timezone.localdate())
+            record, _ = ReviewRecord.objects.get_or_create(
+                user=request.user,
+                term=term,
+                defaults={"next_review_date": timezone.localdate()},
+            )
+            record.apply_answer(familiarity)
+            record.save()
+            DailyActivity.objects.get_or_create(user=request.user, date=timezone.localdate())
+            if session:
+                session.completed_ids = [*session.completed_ids, term.pk]
+                session.save(update_fields=["completed_ids"])
 
         return Response(
             {

@@ -213,6 +213,24 @@ class DailyActivity(models.Model):
         return f"{self.user} · {self.date}"
 
 # digest/models.py
+class ReviewPreferences(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    daily_goal = models.PositiveSmallIntegerField(default=10)
+
+
+class ReviewSession(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="review_sessions")
+    date = models.DateField()
+    term_ids = models.JSONField(default=list)
+    new_term_ids = models.JSONField(default=list)
+    completed_ids = models.JSONField(default=list)
+    scope = models.JSONField(default=dict)
+    mode = models.CharField(max_length=10, default="written")
+
+    class Meta:
+        ordering = ["-id"]
+
+
 class Tag(models.Model):
     """주제 태그. 커리큘럼 챕터 역할도 겸한다 — order가 0보다 크면 정해진 학습 순서가
     있는 '챕터'로 취급하고, 0이면 순서 없이 분류용으로만 쓰는 일반 태그로 남는다."""

@@ -136,6 +136,7 @@ class DueTermSerializer(serializers.ModelSerializer):
 
 
 class ReviewAnswerSerializer(serializers.Serializer):
+    session_id = serializers.IntegerField(required=False, min_value=1)
     familiarity = serializers.ChoiceField(
         choices=[c[0] for c in ReviewRecord.FAMILIARITY_CHOICES]
     )

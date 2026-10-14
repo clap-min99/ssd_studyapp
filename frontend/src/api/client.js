@@ -102,15 +102,29 @@ export const CATEGORY_BADGE_CLASS = {
 
 // 복습 화면용 API — 간격 반복(spaced repetition)
 export const reviewApi = {
+  getSession: () => get("/review/session/"),
+  startSession: async (options) => {
+    const res = await fetch(`${API_BASE}/review/session/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(options),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(Object.values(data).flat().join(" ") || "복습을 시작하지 못했어요.");
+    return data;
+  },
   getDue: () => get("/review/due/"),
   getStreak: () => get("/review/streak/"),
-  submitAnswer: async (termId, familiarity) => {
+  submitAnswer: async (termId, familiarity, sessionId) => {
     const res = await fetch(`${API_BASE}/review/${termId}/answer/`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ familiarity }),
+      body: JSON.stringify({ familiarity, session_id: sessionId }),
     });
-    if (!res.ok) throw new Error("채점 결과 저장에 실패했어요.");
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || "채점 결과 저장에 실패했어요.");
+    }
     return res.json();
   },
   checkAnswer: async (termId, answer) => {
