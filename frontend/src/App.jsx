@@ -9,6 +9,7 @@ import LessonDetail from "./pages/LessonDetail";
 import Glossary from "./pages/Glossary";
 import Review from "./pages/Review";
 import Login from "./pages/Login";
+import Account from "./pages/Account";
 import Privacy from './pages/Privacy';
 import StreakBadge from "./components/StreakBadge";
 import { auth } from "./api/client";
@@ -38,7 +39,9 @@ export default function App() {
         <div className="topbar">
            <StreakBadge refreshKey={streakVersion} />
           <div className="topbar-right">
-            <span className="topbar-username">{auth.getUsername()}</span>
+            <NavLink className="topbar-username" to="/account" aria-label="계정 관리">
+              {auth.getUsername()}
+            </NavLink>
             <button className="logout-link" onClick={handleLogout}>
               로그아웃
             </button>
@@ -46,6 +49,7 @@ export default function App() {
         </div>
 
         <Routes>
+          <Route path="/account" element={<Account onDeleted={handleLogout} />} />
           <Route path="/" element={<TodayFeed />} />
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/digest/:id" element={<DigestDetail />} />

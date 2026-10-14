@@ -6,6 +6,8 @@ from .views import (
     DeepDiveView,
     DueReviewsView,
     LoginView,
+    SignupView,
+    AccountView,
     QuestionViewSet,
     StreakView,
     SubmitReviewAnswerView,
@@ -27,6 +29,8 @@ router.register("questions", QuestionViewSet, basename="question")
 
 urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
+    path("auth/signup/", SignupView.as_view(), name="signup"),
+    path("auth/account/", AccountView.as_view(), name="account"),
     path("review/due/", DueReviewsView.as_view(), name="review-due"),
     path("review/streak/", StreakView.as_view(), name="review-streak"),
     path("review/<int:term_id>/answer/", SubmitReviewAnswerView.as_view(), name="review-answer"),

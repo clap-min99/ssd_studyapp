@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import mixins, viewsets, generics
@@ -14,6 +15,8 @@ from .serializers import (
     DailyDigestListSerializer,
     DueTermSerializer,
     InsightSerializer,
+    SignupSerializer,
+    DeleteAccountSerializer,
     QuestionSerializer,
     ReviewAnswerSerializer,
     TermDetailSerializer,
@@ -32,7 +35,7 @@ class LoginView(APIView):
     POST /api/auth/login/  { "username": "...", "password": "..." }
     -> { "token": "...", "username": "..." }
 
-    회원가입 화면은 없다 — 계정은 Django admin에서 직접 만든다 (아는 사람만 쓰는 개인용 도구).
+    회원가입 또는 관리자가 생성한 계정으로 로그인.
     """
 
     permission_classes = [AllowAny]
@@ -48,6 +51,35 @@ class LoginView(APIView):
 
         token, _ = Token.objects.get_or_create(user=user)
         return Response({"token": token.key, "username": user.username})
+
+
+class SignupView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = SignupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            with transaction.atomic():
+                user = serializer.save()
+                token = Token.objects.create(user=user)
+        except IntegrityError:
+            return Response({"username": ["이미 사용 중인 아이디입니다."]}, status=400)
+        return Response({"token": token.key, "username": user.username}, status=201)
+
+
+class AccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        serializer = DeleteAccountSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not request.user.check_password(serializer.validated_data["password"]):
+            return Response({"detail": "비밀번호가 올바르지 않습니다."}, status=400)
+        with transaction.atomic():
+            request.user.delete()
+        return Response(status=204)
 
 
 class DailyDigestViewSet(viewsets.ReadOnlyModelViewSet):

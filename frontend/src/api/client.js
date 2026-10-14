@@ -6,6 +6,22 @@ export const auth = {
   getUsername: () => localStorage.getItem(`${TOKEN_STORAGE_KEY}_username`),
   isLoggedIn: () => !!localStorage.getItem(TOKEN_STORAGE_KEY),
 
+  signup: async (username, password, passwordConfirm) => {
+    const res = await fetch(`${API_BASE}/auth/signup/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, password_confirm: passwordConfirm }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const messages = Object.values(data).flat().join(" ");
+      throw new Error(messages || "회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    }
+    localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+    localStorage.setItem(`${TOKEN_STORAGE_KEY}_username`, data.username);
+    return data;
+  },
+
   login: async (username, password) => {
     const res = await fetch(`${API_BASE}/auth/login/`, {
       method: "POST",
@@ -25,6 +41,19 @@ export const auth = {
   logout: () => {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(`${TOKEN_STORAGE_KEY}_username`);
+  },
+
+  deleteAccount: async (password) => {
+    const res = await fetch(`${API_BASE}/auth/account/`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(Object.values(data).flat().join(" ") || "계정 삭제에 실패했어요. 다시 시도해 주세요.");
+    }
+    auth.logout();
   },
 };
 

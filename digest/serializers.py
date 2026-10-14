@@ -1,6 +1,36 @@
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
 from .models import Article, DailyDigest, Insight, LearningItem, Lesson, Question, ReviewRecord, Term, Tag
+
+
+class DeleteAccountSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+
+class SignupSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, trim_whitespace=False, max_length=128)
+    password_confirm = serializers.CharField(write_only=True, trim_whitespace=False, max_length=128)
+
+    class Meta:
+        model = get_user_model()
+        fields = ["username", "password", "password_confirm"]
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password_confirm"]:
+            raise serializers.ValidationError({"password_confirm": "비밀번호가 일치하지 않습니다."})
+        user = get_user_model()(username=attrs["username"])
+        try:
+            validate_password(attrs["password"], user=user)
+        except ValidationError as exc:
+            raise serializers.ValidationError({"password": exc.messages}) from exc
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop("password_confirm")
+        return get_user_model().objects.create_user(**validated_data)
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -233,4 +263,3 @@ class LearningItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = LearningItem
         fields = ['id', 'position', 'heading', 'body']
-        
