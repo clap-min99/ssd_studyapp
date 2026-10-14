@@ -47,6 +47,8 @@ Structured Outputs 지원 여부 확인 필요. 모델의 사용 가능 여부�
 
 수동 실행: **Actions → Fetch Daily Digest → Run workflow**.
 누락 날짜 복구 시 `date`에 `2026-10-13` 입력.
+이미 저장된 날짜의 카드도 다시 만들려면 **force** 체크 후 실행.
+선택한 날짜의 기사·학습 카드 교체 및 해설 재생성으로 API 사용료 발생.
 
 ## Cloud Run 설정
 

@@ -9,6 +9,11 @@ on:
         description: "수집할 날짜 (YYYY-MM-DD, 비우면 최신 메일)"
         required: false
         type: string
+      force:
+        description: "이미 저장된 날짜도 기사·학습 카드를 교체하고 해설을 다시 생성"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   fetch:
@@ -50,9 +55,13 @@ jobs:
           OPENAI_REVIEW_MODEL: ${{ vars.OPENAI_REVIEW_MODEL }}
           OPENAI_TAG_MODEL: ${{ vars.OPENAI_TAG_MODEL }}
           DIGEST_DATE: ${{ inputs.date }}
+          DIGEST_FORCE: ${{ inputs.force }}
         run: |
+          args=()
           if [ -n "$DIGEST_DATE" ]; then
-            python manage.py fetch_digest --date "$DIGEST_DATE"
-          else
-            python manage.py fetch_digest
+            args+=(--date "$DIGEST_DATE")
           fi
+          if [ "$DIGEST_FORCE" = "true" ]; then
+            args+=(--force)
+          fi
+          python manage.py fetch_digest "${args[@]}"
