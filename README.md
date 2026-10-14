@@ -1,265 +1,203 @@
 # SSD Digest App
 
-SSD/NAND 컨트롤러 펌웨어 및 자동차 SW 취업을 목표로, 매일 수집한 뉴스 다이제스트 메일을
-자동으로 수집·정리해서 쌓아주는 개인 학습 인프라.
+**매일 도착하는 SSD·자동차 SW 뉴스를 개념 학습과 복습으로 연결하는 개인 학습 앱.**
 
-메일을 열어 읽고, 용어를 찾아보고, 손으로 정리하던 반복 작업을 자동화해서
-정리보다는 개념 이해에 시간을 쓸 수 있게 만드는 것을 목표로 함.
+SSD/NAND 컨트롤러 펌웨어 및 자동차 SW 취업 준비를 위한 개인 학습 인프라.
+메일을 읽고, 용어를 찾아보고, 내용을 따로 정리하는 반복 작업을 줄여
+개념 이해와 반복 학습에 시간을 쓰는 것이 목표.
 
-## 앱 기능
+[전체 파이프라인](#전체-파이프라인) · [주요 기능](#주요-기능) · [로컬 실행](#로컬-실행) · [운영 문서](docs/operations.md)
 
-매일 아침 도착하는 "SSD/자동차 SW 펌웨어 데일리 브리핑" 메일을 자동으로 가져와
-기사 요약·인사이트·새로운 용어·학습 콘텐츠로 구조화, 웹에서 언제든 확인할 수 있게 보여줌.
+## 학습 흐름
 
-- **오늘 피드** — 가장 최근 다이제스트를 한 화면에. 카테고리(SSD/자동차) → 태그(FTL, NAND,
-  PCIe, AUTOSAR 등) 알약 버튼으로 좁혀서, 지나간 기사도 주제별로 다시 찾아볼 수 있음
-- **챕터(커리큘럼)** — 태그를 "학습 순서가 있는 챕터"로 확장한 것. SSD 트랙 6개
-  (NAND 기초 → 호스트 인터페이스 → FTL → 컨트롤러 → 신뢰성 → 차세대), 자동차 트랙 5개
-  (차량 전자 구조 → 차량 통신 → AUTOSAR & SDV → 기능안전과 보안 → ADAS/응용 SW)로
-  구성. 각 챕터는 선행/다음 챕터 링크로 순서대로 이어지고, 챕터 안은 다시 여러 하위
-  레슨으로 나뉘어(레슨끼리도 이전/다음 이동) 있음. 레슨 본문은 마크다운 + 인라인 SVG
-  다이어그램으로 작성, 관련 용어·관련 기사도 탭으로 함께 보여줌
-- **타임라인** — 날짜별로 쌓인 기록을 훑어보기
-- **용어 사전** — 지금까지 나온 모든 용어를 검색 가능한 형태로 누적. "용어/개념" 토글로
-  플래시카드식 용어 설명과, 기사 없는 날 오는 미니 아티클(개념 설명)을 구분해서 봄.
-  개념도 태그로 카테고리 필터링 가능. 용어는 챕터에도 태깅되어 있어 챕터 상세의
-  "관련 용어" 탭에서 다시 보임
-- **복습** — 간격 반복(spaced repetition) 알고리즘 기반. 서술형(Gemini 첨삭) / 객관식
-  (다른 용어 뜻풀이를 오답 보기로 활용) 두 모드 지원. 맞으면 간격이 늘어나고, 틀리면 다음 날
-  다시 봄
-- **스트릭** — 연속 복습일수를 상단바에 표시
-- **로그인** — 토큰 인증, 회원가입 화면 없이 admin에서 계정 직접 생성 (아는 사람만 쓰는
-  개인용 도구)
+매일의 기사와 기초 개념을 같은 태그로 연결해, 새로운 소식을 기존 학습 맥락에서 이해하도록 구성.
 
-## 전체 구조
+1. **매일의 기사 읽기**: 오늘 피드에서 기사 요약과 인사이트 확인.
+2. **기초 개념 학습**: 용어 사전과 챕터 레슨에서 모르는 개념 확인.
+3. **실제 사례 연결**: 챕터의 관련 기사·용어를 통해 개념의 활용 사례 탐색.
+4. **이해도 확인과 복습**: 서술형·객관식 문제 풀이 후 일정 간격으로 반복 학습.
 
-```
-[매일 05:00 KST 뉴스 다이제스트 메일 발송]
-                ↓
-[GitHub Actions: 05:00~06:45 KST 15분 간격 재시도]
-                ↓
-[Gmail API로 메일 수집] → [Gemini API로 구조화(JSON), 503 자동 재시도 포함]
-                ↓
-[Django + Supabase(PostgreSQL)에 저장]
-                ↓
-[React 프론트엔드(Vercel)가 Django API(Cloud Run)를 통해 표시, 로그인 필요]
+## 전체 파이프라인
+
+### 콘텐츠 수집과 저장
+
+- **입력 데이터**: 외부에서 발송되어 Gmail에 도착한 「SSD/자동차 SW 펌웨어 데일리 브리핑」 메일.
+- **프로젝트 범위**: 메일 수집 → 구조화·저장 → 학습 화면 제공.
+- **외부 처리 범위**: 뉴스 검색과 원본 메일 작성·발송.
+
+```mermaid
+flowchart TD
+    Mail[외부 다이제스트 메일 → Gmail] --> Gmail[Gmail API: 대상 메일 조회]
+    Actions[GitHub Actions: 정기 실행 또는 날짜 지정] --> Gmail
+    Gmail --> Gemini[Gemini: 기사·학습 콘텐츠·용어 구조화 및 태그 분류]
+    Gemini --> Save[Django: 원문·구조화 데이터 저장]
+    Save --> DB[(Supabase PostgreSQL)]
+    Save --> Explain[Gemini: 심화 해설 생성]
+    Explain --> DB
 ```
 
-메일 형식이 매일 조금씩 달라지므로, 정규식 대신 LLM 기반 파싱을 택함
-(`fetcher/parser.py`는 정규식 버전 참고용, `fetcher/gemini_parser.py`가 실제 사용 중인 버전).
+- **저장 순서**: 파싱 결과 검증 → DB 저장 → 심화 해설 생성.
+- **해설 생성 실패 시**: 저장된 다이제스트 유지, 앱에서 해설 생성 재시도 가능.
+- **중복 처리**: 이미 저장된 날짜는 기본적으로 건너뛰기.
+
+### 웹에서 학습과 복습
+
+```mermaid
+flowchart LR
+    Web[React · Vercel] --> API[Django REST API · Cloud Run]
+    API --> DB[(Supabase PostgreSQL)]
+    Web --> Learn[피드 · 타임라인 · 용어 · 챕터/레슨]
+    Web --> Review[서술형·객관식 복습]
+    Review --> API
+    API --> AI[Gemini: 서술형 답변 첨삭]
+```
+
+일별 콘텐츠와 미리 작성한 커리큘럼을 태그로 연결.
+레슨은 시드 데이터로 관리하고, 복습 결과에 따라 다음 복습 간격 조정.
+
+## 주요 기능
+
+| 기능 | 할 수 있는 일 |
+|---|---|
+| 오늘 피드 | 최신 기사·학습 콘텐츠를 읽고 카테고리와 태그로 탐색 |
+| 타임라인 | 날짜별 다이제스트를 다시 확인 |
+| 챕터·레슨 | 선행 개념 순서에 따라 학습하고 관련 기사·용어 확인 |
+| 용어 사전 | 누적 용어와 개념 콘텐츠를 검색하고 카테고리별로 탐색 |
+| 복습 | 서술형 답변의 AI 첨삭 또는 객관식 문제로 복습 |
+| 스트릭 | 연속 복습일수 확인 |
+| 로그인 | 관리자가 만든 계정으로 로그인하는 개인용 서비스 |
+
+커리큘럼은 SSD 트랙(NAND → 호스트 인터페이스 → FTL → 컨트롤러 → 신뢰성 → 차세대)과
+자동차 트랙(차량 전자 구조 → 차량 통신 → AUTOSAR & SDV → 기능안전·보안 → ADAS/응용 SW)으로 구성.
+
+## 주요 설계 결정
+
+- **LLM 기반 구조화**: 가변적인 메일 형식에 대응하기 위해 기사·학습 콘텐츠·용어를 LLM으로 추출하고 원문 보관.
+  파싱 구현 위치: `fetcher/gemini_parser.py`.
+- **태그 기반 학습 연결**: 기사와 용어를 주제로 묶고, 학습 순서가 있는 태그를 챕터로 확장해 뉴스와 커리큘럼 연결.
+- **사전 작성 레슨**: 검토한 콘텐츠를 시드로 관리하고, Markdown과 인라인 SVG로 설명과 도식 제공.
+- **PC와 독립적인 수집**: GitHub Actions에서 정기 수집 실행. API는 Cloud Run, 프론트엔드는 Vercel에서 제공.
+
+모델 구조와 콘텐츠 작성 규칙: [커리큘럼 문서](docs/curriculum.md).
 
 ## 기술 스택
 
-| 영역 | 기술 |
+| 영역 | 사용 기술 |
 |---|---|
-| 메일 수집 | Gmail API (OAuth 2.0, Desktop 클라이언트) |
-| 파싱 | Gemini API (`gemini-3.6-flash`), 503 등 일시적 오류는 20초 간격 자동 재시도 |
-| 백엔드 | Django + Django REST Framework |
-| DB | PostgreSQL (Supabase, Transaction Pooler 주소 — Direct Connection은 IPv6 전용이라 대부분 네트워크에서 막힘) |
-| 인증 | DRF TokenAuthentication |
-| 자동화 | GitHub Actions (스케줄 cron) |
-| 프론트엔드 | React (Vite ^5.4.11 고정) + React Router, 순수 CSS |
-| 레슨 렌더링 | `marked` — 레슨 본문(마크다운 + 인라인 SVG)을 HTML로 변환 |
-| 배포 | Google Cloud Run(백엔드, asia-south1) + Vercel(프론트엔드) |
-| CI/CD | Cloud Build 트리거 — `master` push 시 자동 빌드+배포 |
+| 프론트엔드 | React, Vite, React Router, CSS, marked |
+| 백엔드·인증 | Django, Django REST Framework, TokenAuthentication |
+| 데이터베이스 | Supabase PostgreSQL, 로컬 SQLite 지원 |
+| 메일·AI | Gmail API(OAuth 2.0), Gemini API |
+| 수집 자동화 | GitHub Actions |
+| 배포 | Vercel, Google Cloud Run, Artifact Registry, Cloud Build |
 
-## 폴더 구조
+패키지 버전: [requirements.txt](requirements.txt), [frontend/package.json](frontend/package.json).
+백엔드 배포: `master` push → 연결된 Cloud Build 트리거 실행 →
+`cloudbuild.yaml`에 정의된 빌드 → 이미지 업로드 → Cloud Run 배포.
 
-```
-ssd_studyapp/
-├── manage.py
-├── requirements.txt
-├── Dockerfile                  # Cloud Run 배포용
-├── .dockerignore
-├── cloudbuild.yaml             # Cloud Build 트리거가 사용 (build→push→deploy 3단계)
-├── .env                        # 로컬 전용, git 제외
-├── .gitignore
-│
-├── config/
-│   ├── settings.py             # DB 분기, CORS, DJANGO_ADMIN_URL(숨김 처리), 보안 설정
-│   └── urls.py
-│
-├── digest/
-│   ├── models.py                # DailyDigest / Article / LearningItem / Term /
-│   │                             # Tag(=챕터, order/prerequisite/lesson_body 포함) /
-│   │                             # Lesson(챕터 하위 레슨) / ReviewRecord / Insight /
-│   │                             # Question / DailyActivity
-│   ├── serializers.py
-│   ├── views.py
-│   ├── urls.py
-│   ├── admin.py
-│   └── management/commands/
-│       ├── fetch_digest.py         # 매일 실행되는 핵심 커맨드 (--force, --dry-run 지원)
-│       ├── seed_tags.py            # 태그(=챕터) 초기 데이터, order/prerequisite 포함
-│       ├── seed_lessons.py         # 챕터 단일 페이지 레슨 본문(Tag.lesson_body) 시드
-│       ├── seed_lesson_pages.py    # 챕터를 여러 하위 레슨(Lesson)으로 쪼갠 콘텐츠 시드
-│       ├── backfill_tags.py        # 기존 기사에 소급으로 태그 채우는 1회성 커맨드(Gemini)
-│       └── backfill_term_tags.py   # 기존 용어에 소급으로 태그 채우는 1회성 커맨드(Gemini,
-│                                    # 무료 티어 하루 20회 제한이라 레이트리밋 재시도 포함)
-│
-├── fetcher/                     # Django와 독립적인 수집/파싱 모듈
-│   ├── gmail_client.py
-│   ├── gemini_parser.py         # 구조화 + 태그 분류 + 답변 첨삭, 전부 여기
-│   ├── credentials.json         # git 제외
-│   └── token.json               # git 제외, 최초 인증 후 자동 생성
-│
-├── .github/workflows/fetch_digest.yml
-│
-└── frontend/
-    ├── src/
-    │   ├── api/client.js        # api / reviewApi, CATEGORY_LABEL/BADGE_CLASS
-    │   ├── components/          # Modal, TermDetail, DigestNotes, StreakBadge
-    │   ├── pages/
-    │   │   ├── TodayFeed.jsx     # 오늘 피드 + 카테고리/태그 브라우저
-    │   │   ├── Timeline.jsx
-    │   │   ├── DigestDetail.jsx / DigestView.jsx
-    │   │   ├── Chapters.jsx      # 챕터 목록, SSD/자동차 트랙 전환 탭
-    │   │   ├── ChapterDetail.jsx # 챕터 상세 — 레슨 목차(또는 단일 페이지)/관련 용어/실제 사례 탭
-    │   │   ├── LessonDetail.jsx  # 레슨 본문(마크다운+SVG), 이전/다음 레슨·다음 챕터 이동
-    │   │   ├── Glossary.jsx      # 용어/개념 토글 + 카테고리 필터
-    │   │   ├── Review.jsx        # 서술형/객관식 복습
-    │   │   ├── Privacy.jsx       # OAuth 프로덕션 게시용 최소 개인정보처리방침
-    │   │   └── Login.jsx
-    │   ├── App.jsx / App.css
-    └── vercel.json
+## 로컬 실행
+
+실행 환경: Actions와 동일한 **Python 3.12**, 프론트엔드용 Node.js 및 npm.
+
+### 1. 환경 설정
+
+프로젝트 루트에 `.env` 생성. 아래는 로컬 SQLite 사용 예시.
+
+```dotenv
+DJANGO_SECRET_KEY=local-development-key
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,testserver
+DATABASE_URL=sqlite:///db.sqlite3
+GEMINI_API_KEY=your-gemini-api-key
 ```
 
-## 로컬에서 실행하기
+- **DB 설정**: `DATABASE_URL` 생략 시 SQLite 사용. Supabase 주소 설정 시 로컬 명령도 해당 DB에 반영되므로 개발용 DB와 서비스 DB 구분 필요.
+- **Gmail 인증**: 데스크톱 앱 OAuth 클라이언트 JSON을 `fetcher/credentials.json`에 저장.
+  최초 수집 시 브라우저 인증 후 `fetcher/token.json` 자동 생성.
+
+### 2. 백엔드 실행
+
+가상환경 생성·활성화 후 프로젝트 루트에서 실행.
 
 ```bash
-# 백엔드
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py seed_tags              # 태그(=챕터) 목록/순서
-python manage.py seed_lessons           # 챕터 단일 페이지 레슨 본문
-python manage.py seed_lesson_pages      # 챕터를 하위 레슨 여러 개로 쪼갠 콘텐츠 (있는 챕터만)
-python manage.py fetch_digest           # 최초 실행 시 브라우저 인증 필요 (credentials.json 필요)
+python manage.py seed_tags
+python manage.py seed_lessons
+python manage.py seed_lesson_pages
+python manage.py createsuperuser
 python manage.py runserver
+```
 
-# 프론트엔드
+생성한 계정으로 앱 로그인. 메일 수집은 별도로 `python manage.py fetch_digest` 실행.
+
+### 3. 프론트엔드 실행
+
+별도 터미널에서 실행.
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-**매일 쓰는 명령어**
-```bash
-python manage.py fetch_digest              # 최신 다이제스트 가져와서 저장
-python manage.py fetch_digest --dry-run    # 저장 없이 결과만 미리보기
-python manage.py fetch_digest --force      # 같은 날짜 데이터 덮어쓰기
-```
+- **기본 API 주소**: `http://127.0.0.1:8000/api`.
+- **다른 백엔드 연결**: `frontend/.env`에 `VITE_API_BASE` 설정.
 
-로컬 `.env`의 `DATABASE_URL`이 Supabase 프로덕션 주소와 동일하므로, 로컬에서 실행한
-결과가 곧바로 실제 서비스에 반영됨 (별도의 로컬 전용 DB 없음).
+## 자동화와 누락 날짜 복구
 
-## 커리큘럼(챕터) 콘텐츠 구조
+- **정기 실행**: [수집 워크플로](.github/workflows/fetch_digest.yml)에서 KST 05:00~06:45 사이 15분 간격 실행.
+- **기본 수집 대상**: 최근 메일 중 최신 다이제스트.
+- **일시적 오류 대응**: Gemini의 500·502·503·504 응답에 대해 클라이언트에서 20초 간격 재시도.
 
-새 모델을 만드는 대신 기존 `Tag`를 확장해서 챕터로 썼음 — 기존 태그 경계가 챕터
-경계와 거의 겹쳐서, 새 taxonomy를 따로 만들고 유지보수하는 부담을 피함.
+**누락 날짜 복구는 날짜를 직접 지정하는 방식.** 과거 누락분의 일괄 자동 복구는 미지원.
 
-- `Tag.order > 0`이면 학습 순서가 있는 "챕터", `0`이면 순서 없는 일반 분류 태그
-  (`market-ssd`, `market-auto`, `semiconductor`, `battery` 등 콘텐츠가 아직 얇은 것들)
-- `Tag.prerequisite`가 선행 챕터를 가리키는 자기참조 FK. 역참조(`next_chapters`)로
-  "다음 챕터"도 같이 구함
-- 레슨 본문은 두 갈래로 존재: `Tag.lesson_body`(챕터 전체가 한 페이지짜리일 때) 또는
-  `Lesson`(챕터를 여러 하위 레슨으로 쪼갰을 때). `Lesson`이 하나라도 있으면 프론트가
-  그쪽을 우선 보여주고, 없으면 `lesson_body`로 폴백 — 그래서 챕터마다 깊이가 달라도
-  안 깨짐
-- 레슨 콘텐츠는 Gemini로 매번 생성하지 않고 **미리 손으로 작성해서 시드**해둠(위
-  명령어들). 교과서 성격의 콘텐츠라 매일 바뀔 이유가 없고, 런타임 API 호출/할당량
-  걱정 없이 품질을 한 번에 검수할 수 있어서 이 방식을 택함
-- 그림은 별도 이미지 호스팅 없이 **레슨 본문 마크다운 안에 인라인 SVG**로 직접 그려
-  넣음(`marked`가 raw HTML을 그대로 통과시킴). 새 다이어그램을 추가할 때 반드시
-  지킬 것 두 가지 — 아래 트러블슈팅 로그의 "SVG 그림 일부가 사라짐", "숫자 범위
-  표기가 취소선으로 보임" 항목 참고
+1. **수동 실행 열기**: 날짜 지정 기능이 반영된 브랜치에서 GitHub **Actions → Fetch Daily Digest → Run workflow** 선택.
+2. **대상 날짜 입력**: `date`에 `2026-10-13`처럼 메일 제목의 날짜 입력 후 실행.
+3. **복구 결과 확인**: 실행 로그와 앱 타임라인 확인. 다른 날짜는 각각 별도 실행.
 
-## 배포 (Google Cloud Run)
+`date`를 비우면 최신 메일 수집. 아래 명령으로 로컬 실행도 가능.
 
 ```bash
-gcloud run deploy ssd-studyapp-api \
-  --source . \
-  --region asia-south1 \
-  --allow-unauthenticated \
-  --max-instances=2 \
-  --set-env-vars DJANGO_DEBUG=False,DJANGO_ADMIN_URL=<임의 문자열>/,DJANGO_ALLOWED_HOSTS=<서비스 URL>,CORS_EXTRA_ORIGINS=<Vercel 도메인> \
-  --set-secrets DJANGO_SECRET_KEY=django-secret-key:latest,DATABASE_URL=database-url:latest,GEMINI_API_KEY=gemini-api-key:latest
+python manage.py fetch_digest                     # 최신 메일 수집
+python manage.py fetch_digest --date 2026-10-13   # 특정 날짜 복구
+python manage.py fetch_digest --dry-run           # DB 저장 없이 파싱 결과 확인
+python manage.py fetch_digest --force             # 선택된 날짜의 기존 콘텐츠 교체
 ```
 
-민감한 값(`DJANGO_SECRET_KEY`, `DATABASE_URL`, `GEMINI_API_KEY`)은 평문 대신
-Secret Manager에 저장해서 참조. 필요한 IAM 권한 (프로젝트 번호는 예시):
-```bash
-gcloud projects add-iam-policy-binding <project-id> \
-  --member="serviceAccount:<project-number>-compute@developer.gserviceaccount.com" \
-  --role="roles/cloudbuild.builds.builder"
-gcloud projects add-iam-policy-binding <project-id> \
-  --member="serviceAccount:<project-number>-compute@developer.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor"
-gcloud projects add-iam-policy-binding <project-id> \
-  --member="serviceAccount:<project-number>-compute@developer.gserviceaccount.com" \
-  --role="roles/run.admin"
-gcloud iam service-accounts add-iam-policy-binding \
-  <project-number>-compute@developer.gserviceaccount.com \
-  --member="serviceAccount:<project-number>-compute@developer.gserviceaccount.com" \
-  --role="roles/iam.serviceAccountUser"
+- **중복 저장 방지**: 이미 저장된 날짜는 기본적으로 건너뛰며, 누락 날짜 복구에는 `--force` 불필요.
+- **미리보기 범위**: `--dry-run`은 DB 저장만 생략하며 Gmail 및 Gemini API 호출 포함.
+
+Actions 실행에 필요한 GitHub Secrets. 로컬 인증 파일과 별도 관리.
+
+| Secret | 용도 |
+|---|---|
+| `GMAIL_CREDENTIALS_JSON` | Gmail OAuth 클라이언트 JSON |
+| `GMAIL_TOKEN_JSON` | Gmail 접근 토큰 및 갱신 정보 |
+| `GEMINI_API_KEY` | 구조화·해설 생성 API 인증 |
+| `DATABASE_URL` | 저장 대상 DB 연결 |
+| `DJANGO_SECRET_KEY` | Django 실행 설정 |
+
+배포 절차와 기존 장애 대응 기록: [운영 문서](docs/operations.md).
+
+## 코드 둘러보기
+
+```text
+ssd_studyapp/
+├── config/                  # Django 설정·URL
+├── digest/                  # 데이터 모델·REST API·관리 명령
+│   └── management/commands/ # 수집 및 커리큘럼 시드
+├── fetcher/                 # Gmail 수집·Gemini 파싱·원문 순서 처리
+├── frontend/src/            # React 화면·컴포넌트·API 클라이언트
+├── .github/workflows/       # 수집 자동화
+├── cloudbuild.yaml          # 백엔드 빌드·배포
+└── docs/                    # 운영·커리큘럼 상세 문서
 ```
-
-**CI/CD**: Cloud Build 트리거가 `master` 브랜치 push마다 `cloudbuild.yaml`을 읽어
-빌드→Artifact Registry push→Cloud Run 배포까지 자동 수행. 이후로는 로컬에서
-`git push`만 하면 몇 분 뒤 자동 반영됨 (Cloud Shell에서 수동 `gcloud run deploy` 불필요).
-
-**리전**: DB(Supabase, 뭄바이/`ap-south-1`)와 Cloud Run 리전을 맞춰서(`asia-south1`)
-API 응답마다 발생하는 서버↔DB 왕복 지연을 없앰 — 처음엔 서울(`asia-northeast3`)로
-배포했다가, 요청 하나당 DB 쿼리가 여러 번 나가는 구조라 지연이 누적돼 체감 속도가
-크게 느렸던 것을 이 방식으로 해결함.
-
-**무료 한도**: Cloud Run Always Free(월 요청 200만 건 등)는 GCP 90일/약 $300 체험
-크레딧과 별개로 계속 적용됨. 체험판 만료 전 "일반 계정으로 전환"해도 무료 한도 안에서는
-과금되지 않음 — 다만 전환을 안 해두면 만료일에 서비스가 자동으로 멈추니 미리 해두는 게 안전함.
-
-## 자동화 (GitHub Actions)
-
-`.github/workflows/fetch_digest.yml`이 다이제스트 발송 시각(05:00 KST)에 맞춰
-05:00~06:45 KST 사이 15분 간격으로 재시도. 이미 저장된 날짜는 자동으로 건너뛰므로
-여러 번 실행돼도 중복 저장 걱정 없음. PC가 꺼져 있어도 동작함.
-
-**필요한 GitHub Secrets**: `GMAIL_CREDENTIALS_JSON`, `GMAIL_TOKEN_JSON`, `GEMINI_API_KEY`,
-`DATABASE_URL`, `DJANGO_SECRET_KEY`
-
-**⚠️ Gmail OAuth 앱을 반드시 "프로덕션"으로 게시해둘 것**: OAuth 동의 화면이
-"테스트" 상태면 리프레시 토큰이 발급 후 **7일 뒤 무조건 만료**됨 (사용 빈도 무관).
-`console.cloud.google.com/apis/credentials/consent`에서 게시 상태를 프로덕션으로
-바꾸면 이 문제가 사라짐. 토큰이 만료되면 로컬에서 `fetcher/token.json` 삭제 후
-`python manage.py fetch_digest` 재실행 → 브라우저 재인증 → 새 `token.json`을
-`GMAIL_TOKEN_JSON` 시크릿에 갱신.
-
-## 트러블슈팅 로그
-
-| 문제 | 원인 | 해결 |
-|---|---|---|
-| Vite 8.x 빌드 실패 (Windows) | rolldown 네이티브 바이너리 이슈 | `vite ^5.4.11`로 고정 |
-| Supabase Direct Connection 연결 안 됨 | IPv6 전용 | Transaction Pooler 주소로 전환 |
-| Gemini 모델명 만료 | `gemini-2.5-flash` deprecated | `gemini-3.6-flash`로 교체 |
-| Gemini 503 자주 발생 | 일시적 과부하 | 클라이언트에 `HttpRetryOptions`(20초 간격, 4회) 추가 |
-| Gemini가 null 반환 시 DB 에러 | TextField는 NULL 비허용 | `_none_to_empty()`로 방어 |
-| Cloud Run 컨테이너 시작 실패 | Dockerfile이 `$PORT` 대신 포트 8000 하드코딩 | `CMD exec gunicorn ... --bind 0.0.0.0:$PORT`로 수정 |
-| `gcloud run deploy` 소스 업로드 권한 오류 | 최신 GCP 프로젝트는 기본 서비스 계정에 자동 권한 미부여 | `roles/cloudbuild.builds.builder` 부여 |
-| 배포 시 시크릿 접근 거부 | 서비스 계정에 Secret Manager 권한 없음 | `roles/secretmanager.secretAccessor` 부여 |
-| 재배포할 때마다 400 Bad Request | `--set-env-vars`가 기존 `DJANGO_ALLOWED_HOSTS` 덮어씀 | 재배포 시 항상 `DJANGO_ALLOWED_HOSTS` 포함해서 지정 |
-| Cloud Build 트리거는 성공하는데 실제 배포 안 됨 | Dockerfile 자동감지 트리거는 빌드만 하고 배포 안 함 | `cloudbuild.yaml`로 build→push→deploy 3단계 명시 |
-| Cloud Build "logging bucket" 오류 | 서비스 계정 지정 시 로그 저장 위치 명시 필요 | `cloudbuild.yaml`에 `options: logging: CLOUD_LOGGING_ONLY` 추가 |
-| 새 다이제스트에 기사가 하나도 저장 안 됨 | 태그 기능 추가 중 들여쓰기 실수로 기사 저장 루프가 `if not created:` 블록 안에 갇힘 | 루프를 블록 밖으로 이동 |
-| Gmail 토큰 7일마다 만료 | OAuth 동의 화면이 "테스트" 상태 | "프로덕션"으로 게시 (위 자동화 섹션 참고) |
-| 스트릭 배지가 갱신 안 됨 | `StreakBadge`가 앱 마운트 시 한 번만 fetch, 복습 완료 이벤트를 못 받음 | `refreshKey` prop + 복습 제출 시 콜백으로 재조회 트리거 |
-| 레슨의 SVG 그림 일부가 사라짐 | 레슨 본문 markdown 안에서 `<svg>...</svg>` 블록 중간에 빈 줄이 있으면, 마크다운 파서가 그 지점에서 HTML 블록을 끊어버려 이후 태그들이 `<svg>` 밖으로 떨어져 나가 렌더링 안 됨 | SVG 블록 내부에 빈 줄 절대 넣지 않기 |
-| "6만~10만 회" 같은 숫자 범위 표기가 취소선으로 보임 | GFM 마크다운이 단일 `~`도 취소선(strikethrough) 문법으로 해석 | 범위 표기의 `~`는 `\~`로 이스케이프 |
-| "**용어(영문)**이/가/은/는" 형태의 볼드가 안 먹고 별표가 그대로 보임 | CommonMark의 강조 닫힘 규칙상, 닫는 `**` 바로 앞이 괄호 등 구두점이면서 바로 뒤에 공백/구두점 없이 문자(조사)가 오면 우측-플랭킹 조건을 못 만족해 닫힘으로 인정 안 됨 | `)**조사` 패턴 뒤에 공백 하나 추가 (`)** 조사`) — 새 레슨 콘텐츠 작성 후 `\)\*\*[가-힣]` 정규식으로 항상 검사 |
 
 ## 앞으로 할 것
 
 - [ ] PWA 오프라인 지원
-- [ ] 질문/인사이트 전체 모아보기 화면 (API는 이미 있음, 프론트 화면만 없음)
-- [ ] 용어 숙련도 통계/대시보드
-- [ ] 자동차 트랙의 `semiconductor`/`battery`/`market-auto` 태그 — 콘텐츠가 아직
-      얇아서(1~2건) 챕터로 승격 안 하고 일반 태그로 남겨둠. 관련 기사/용어가 쌓이면
-      챕터로 정리
-- [ ] 챕터/레슨 완료 체크(진행률) — 지금은 그냥 다 보여주기만 함
+- [ ] 질문·인사이트 전체 모아보기 화면
+- [ ] 용어 숙련도 통계·대시보드
+- [ ] 콘텐츠가 쌓인 자동차 트랙 일반 태그를 챕터로 확장
+- [ ] 챕터·레슨 완료 체크 및 학습 진행률

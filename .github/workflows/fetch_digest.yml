@@ -3,7 +3,12 @@ name: Fetch Daily Digest
 on:
   schedule:
     - cron: "*/15 20-21 * * *"   # KST 05:00~06:45, 15분마다 시도
-  workflow_dispatch: {}  # 手動으로도 실행 가능하게 (Actions 탭에서 Run workflow 버튼)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "수집할 날짜 (YYYY-MM-DD, 비우면 최신 메일)"
+        required: false
+        type: string
 
 jobs:
   fetch:
@@ -39,4 +44,10 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python manage.py fetch_digest
+          DIGEST_DATE: ${{ inputs.date }}
+        run: |
+          if [ -n "$DIGEST_DATE" ]; then
+            python manage.py fetch_digest --date "$DIGEST_DATE"
+          else
+            python manage.py fetch_digest
+          fi

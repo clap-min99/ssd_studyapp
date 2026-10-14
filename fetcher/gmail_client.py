@@ -14,7 +14,7 @@ from __future__ import annotations
 import base64
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -88,7 +88,7 @@ def _decode_body(payload: dict) -> str:
         return ""
 
 
-def fetch_latest_digest(days_back: int = 2) -> dict | None:
+def fetch_latest_digest(days_back: int = 2, target_date: date | None = None) -> dict | None:
     """
     최근 `days_back`일 내에 도착한 다이제스트 메일 중 가장 최신 것을 가져온다.
 
@@ -100,11 +100,25 @@ def fetch_latest_digest(days_back: int = 2) -> dict | None:
 
     after_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y/%m/%d")
     query = f'subject:"SSD" after:{after_date}'
+    if target_date is not None:
+        # Search by subject date, independent of delivery time and days_back.
+        query = f'subject:"SSD" subject:"{target_date.isoformat()}"'
 
+    page_token = None
+    while True:
+        result = _find_digest_page(service, query, target_date, page_token)
+        if result[0] is not None:
+            return result[0]
+        page_token = result[1]
+        if not page_token:
+            return None
+
+
+def _find_digest_page(service, query, target_date, page_token):
     results = (
         service.users()
         .messages()
-        .list(userId="me", q=query, maxResults=10)
+        .list(userId="me", q=query, maxResults=10, pageToken=page_token)
         .execute()
     )
     messages = results.get("messages", [])
@@ -125,6 +139,8 @@ def fetch_latest_digest(days_back: int = 2) -> dict | None:
         match = SUBJECT_PATTERN.search(subject)
         if not match:
             continue
+        if target_date is not None and match.group(1) != target_date.isoformat():
+            continue
 
         body = _decode_body(msg["payload"])
 
@@ -132,9 +148,9 @@ def fetch_latest_digest(days_back: int = 2) -> dict | None:
             "date": match.group(1),
             "subject": subject,
             "body": body,
-        }
+        }, None
 
-    return None
+    return None, results.get("nextPageToken")
 
 
 if __name__ == "__main__":

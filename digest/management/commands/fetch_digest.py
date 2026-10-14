@@ -28,6 +28,11 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
+            "--date",
+            dest="target_date",
+            help="수집할 메일 제목의 날짜 (YYYY-MM-DD). 생략하면 최신 메일 수집.",
+        )
+        parser.add_argument(
             "--days-back",
             type=int,
             default=2,
@@ -45,8 +50,20 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        target_date = None
+        if options["target_date"]:
+            try:
+                value = options["target_date"]
+                target_date = date_cls.fromisoformat(value)
+                if target_date.isoformat() != value:
+                    raise ValueError
+            except ValueError as exc:
+                raise CommandError("--date는 YYYY-MM-DD 형식의 유효한 날짜여야 합니다.") from exc
+            self.stdout.write(f"수집 대상 날짜: {target_date}")
         self.stdout.write("Gmail에서 최신 다이제스트 메일 확인 중...")
-        digest_mail = fetch_latest_digest(days_back=options["days_back"])
+        digest_mail = fetch_latest_digest(days_back=options["days_back"], target_date=target_date)
+        if target_date is not None and digest_mail is None:
+            raise CommandError(f"{target_date} 날짜의 다이제스트 메일을 찾지 못했습니다.")
 
         if digest_mail is None:
             raise CommandError("최근 다이제스트 메일을 찾지 못했습니다.")
