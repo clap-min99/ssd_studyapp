@@ -258,9 +258,3 @@ class LessonDetailSerializer(serializers.ModelSerializer):
     def get_next_chapter_name(self, obj):
         next_chapter = self._next_chapter(obj)
         return next_chapter.name if next_chapter else None
-
-
-class LearningItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LearningItem
-        fields = ['id', 'position', 'heading', 'body']

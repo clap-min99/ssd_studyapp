@@ -129,6 +129,19 @@ class DigestOrderTests(TestCase):
         self.fetch(dry_run=True)
         self.assertFalse(DailyDigest.objects.exists())
 
+    def test_concept_lists_include_saved_source_and_explanation(self):
+        self.fetch(count=2, articles=False)
+        item = LearningItem.objects.order_by("position").first()
+        tag = Tag.objects.create(slug="ftl", name="FTL", category="ssd")
+        item.tags.add(tag)
+        for url in ("/api/learning-items/", "/api/tags/ftl/learning-items/"):
+            with self.subTest(url=url):
+                response = self.api.get(url)
+                self.assertEqual(response.status_code, 200)
+                data = next(row for row in response.json() if row["id"] == item.pk)
+                self.assertEqual(data["source_text"], item.source_text)
+                self.assertEqual(data["deep_dive"], "해설")
+
     def test_positions_override_insertion_and_pk_order_in_every_endpoint(self):
         digest = DailyDigest.objects.create(date="2026-10-06", subject="test", raw_text="")
         tag = Tag.objects.create(slug="ftl", name="FTL", category="ssd")

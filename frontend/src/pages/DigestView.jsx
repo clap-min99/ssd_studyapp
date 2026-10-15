@@ -30,7 +30,7 @@ export default function DigestView({ digest }) {
                 {CATEGORY_LABEL[a.category] ?? a.category}
               </span>
               <h3>{a.title}</h3>
-              {a.summary && <p>{a.summary}</p>}
+              {a.summary && <p className="digest-summary">{a.summary}</p>}
               {a.insight && <p className="insight">💡 {a.insight}</p>}
               {a.links.length > 0 && (
                 <div className="links">
@@ -62,7 +62,7 @@ export default function DigestView({ digest }) {
               onClick={() => setSelectedItem({ kind: "learning-item", item: li })}
             >
               <h3>{li.heading}</h3>
-              <p>{li.body}</p>
+              <p className="digest-summary">{li.body}</p>
             </article>
           ))}
         </section>

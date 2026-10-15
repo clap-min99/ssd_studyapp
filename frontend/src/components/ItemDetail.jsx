@@ -26,9 +26,9 @@ export default function ItemDetail({ kind, item, rawText, onClose }) {
   return (
     <Modal onClose={onClose}>
       <h3 style={{ fontSize: 20, marginTop: 0 }}>{item.title ?? item.heading}</h3>
-      {item.summary && <p>{item.summary}</p>}
+      {item.summary && <p className="digest-summary">{item.summary}</p>}
       {item.insight && <p className="insight">💡 {item.insight}</p>}
-      {item.body && <p>{item.body}</p>}
+      {item.body && <p className="digest-summary">{item.body}</p>}
 
       <div className="term-detail-block">
         <p className="term-detail-label">AI 심화 해설</p>

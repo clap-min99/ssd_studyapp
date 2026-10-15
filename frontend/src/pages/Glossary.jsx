@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, CATEGORY_BADGE_CLASS } from "../api/client";
 import TermDetail from "../components/TermDetail";
+import ItemDetail from "../components/ItemDetail";
 
 const FAMILIARITY_LABEL = {
   new: "처음 봄",
@@ -27,6 +28,7 @@ export default function Glossary() {
   // --- 개념: 전체 목록 ---
   const [concepts, setConcepts] = useState([]);
   const [conceptsLoaded, setConceptsLoaded] = useState(false);
+  const [selectedConcept, setSelectedConcept] = useState(null);
 
   // --- 개념: 카테고리/태그 필터 ---
   const [conceptView, setConceptView] = useState(""); // "" | "ssd" | "automotive"
@@ -151,9 +153,9 @@ export default function Glossary() {
               <p className="status-message">아직 모아둔 개념이 없어요.</p>
             ) : (
               concepts.map((c) => (
-                <article key={c.id} className="card">
+                <article key={c.id} className="card clickable" onClick={() => setSelectedConcept(c)}>
                   <h3>{c.heading}</h3>
-                  <p>{c.body}</p>
+                  <p className="digest-summary">{c.body}</p>
                 </article>
               ))
             )
@@ -177,9 +179,9 @@ export default function Glossary() {
                 <>
                   <p className="status-message">{selectedTag.description}</p>
                   {tagConcepts.map((c) => (
-                    <article key={c.id} className="card">
+                    <article key={c.id} className="card clickable" onClick={() => setSelectedConcept(c)}>
                       <h3>{c.heading}</h3>
-                      <p>{c.body}</p>
+                      <p className="digest-summary">{c.body}</p>
                     </article>
                   ))}
                 </>
@@ -191,6 +193,14 @@ export default function Glossary() {
 
       {selectedTermId && (
         <TermDetail termId={selectedTermId} onClose={() => setSelectedTermId(null)} />
+      )}
+      {selectedConcept && (
+        <ItemDetail
+          key={selectedConcept.id}
+          kind="learning-item"
+          item={selectedConcept}
+          onClose={() => setSelectedConcept(null)}
+        />
       )}
     </div>
   );
