@@ -135,6 +135,36 @@ h3 {
   line-height: 1.7;
 }
 
+.concept-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.concept-card-header > .pill { flex-shrink: 0; }
+
+.concept-title {
+  border: 0;
+  padding: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bookmark-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.bookmark-hint { font-size: 13px; color: var(--muted); }
+
 .card .digest-summary {
   line-height: 1.7;
   margin: 10px 0;

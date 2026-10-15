@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { api, CATEGORY_BADGE_CLASS } from "../api/client";
+import { api, auth, bookmarkApi, CATEGORY_BADGE_CLASS } from "../api/client";
+import { Link } from "react-router-dom";
 import TermDetail from "../components/TermDetail";
 import ItemDetail from "../components/ItemDetail";
 
@@ -29,6 +30,16 @@ export default function Glossary() {
   const [concepts, setConcepts] = useState([]);
   const [conceptsLoaded, setConceptsLoaded] = useState(false);
   const [selectedConcept, setSelectedConcept] = useState(null);
+  const [conceptQuery, setConceptQuery] = useState("");
+  const [conceptError, setConceptError] = useState(null);
+  const [tagLoading, setTagLoading] = useState(false);
+  const [tagError, setTagError] = useState(null);
+  const [bookmarkIds, setBookmarkIds] = useState([]);
+  const [bookmarksLoaded, setBookmarksLoaded] = useState(false);
+  const [bookmarkError, setBookmarkError] = useState(null);
+  const [savingBookmark, setSavingBookmark] = useState(null);
+  const [bookmarksOnly, setBookmarksOnly] = useState(false);
+  const loggedIn = auth.isLoggedIn();
 
   // --- 개념: 카테고리/태그 필터 ---
   const [conceptView, setConceptView] = useState(""); // "" | "ssd" | "automotive"
@@ -49,16 +60,42 @@ export default function Glossary() {
   }, []);
 
   useEffect(() => {
-    if (mode === "concept" && !conceptsLoaded) {
-      api.getLearningItems().then((data) => {
+    if (mode !== "concept") return;
+    let active = true;
+    Promise.all([api.getLearningItems(), api.getTags()])
+      .then(([data, tagData]) => {
+        if (!active) return;
         setConcepts(data);
+        setTags(tagData);
         setConceptsLoaded(true);
-      });
-    }
-    if (mode === "concept" && tags.length === 0) {
-      api.getTags().then(setTags);
-    }
-  }, [mode, conceptsLoaded, tags.length]);
+      })
+      .catch((e) => active && setConceptError(e.message));
+    return () => { active = false; };
+  }, [mode]);
+
+  useEffect(() => {
+    if (!selectedTag) return;
+    let active = true;
+    api.getTagLearningItems(selectedTag.slug)
+      .then((data) => active && setTagConcepts(data))
+      .catch((e) => active && setTagError(e.message))
+      .finally(() => active && setTagLoading(false));
+    return () => { active = false; };
+  }, [selectedTag]);
+
+  useEffect(() => {
+    if (mode !== "concept" || !loggedIn) return;
+    let active = true;
+    bookmarkApi.getIds()
+      .then((ids) => {
+        if (!active) return;
+        setBookmarkIds(ids);
+        setBookmarksLoaded(true);
+        setBookmarkError(null);
+      })
+      .catch((e) => active && setBookmarkError(e.message));
+    return () => { active = false; };
+  }, [mode, loggedIn]);
 
   const filtered = terms.filter(
     (t) =>
@@ -67,6 +104,14 @@ export default function Glossary() {
   );
 
   const filteredTags = tags.filter((t) => t.category === conceptView);
+  const searchWords = conceptQuery.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const matchesConcept = (concept) => {
+    const text = `${concept.heading ?? ""} ${concept.body ?? ""}`.toLocaleLowerCase();
+    return searchWords.every((word) => text.includes(word))
+      && (!bookmarksOnly || bookmarkIds.includes(concept.id));
+  };
+  const filteredConcepts = concepts.filter(matchesConcept);
+  const filteredTagConcepts = tagConcepts.filter(matchesConcept);
 
   const changeConceptView = (value) => {
     setConceptView(value);
@@ -74,10 +119,53 @@ export default function Glossary() {
     setTagConcepts([]);
   };
 
-  const selectConceptTag = async (tag) => {
-    setSelectedTag(tag);
-    setTagConcepts(await api.getTagLearningItems(tag.slug));
+  const selectConceptTag = (tag) => {
+    if (selectedTag?.slug === tag.slug && !tagError) return;
+    setTagLoading(true);
+    setTagError(null);
+    setTagConcepts([]);
+    setSelectedTag(tagError ? { ...tag } : tag);
   };
+
+  const toggleBookmark = async (concept) => {
+    if (savingBookmark !== null) return;
+    const saved = bookmarkIds.includes(concept.id);
+    setSavingBookmark(concept.id);
+    setBookmarkError(null);
+    try {
+      await bookmarkApi.set(concept.id, !saved);
+      setBookmarkIds((ids) => saved ? ids.filter((id) => id !== concept.id) : [...ids, concept.id]);
+    } catch (e) {
+      setBookmarkError(e.message);
+    } finally {
+      setSavingBookmark(null);
+    }
+  };
+
+  const renderConcept = (concept) => (
+    <article key={concept.id} className="card">
+      <div className="concept-card-header">
+        <button className="concept-title" onClick={() => setSelectedConcept(concept)}>
+          <h3>{concept.heading}</h3>
+        </button>
+        {loggedIn && (
+          <button
+            className={`pill pill-button ${bookmarkIds.includes(concept.id) ? "pill-accent" : "pill-neutral"}`}
+            aria-label={`${concept.heading} 북마크 ${bookmarkIds.includes(concept.id) ? "해제" : "저장"}`}
+            aria-pressed={bookmarkIds.includes(concept.id)}
+            disabled={!bookmarksLoaded || savingBookmark !== null}
+            onClick={() => toggleBookmark(concept)}
+          >
+            {savingBookmark === concept.id ? "저장 중…" : bookmarkIds.includes(concept.id) ? "★ 저장됨" : "☆ 저장"}
+          </button>
+        )}
+      </div>
+      <p className="digest-summary">{concept.body}</p>
+      <button className="pill pill-button pill-neutral" onClick={() => setSelectedConcept(concept)}>
+        자세히 보기
+      </button>
+    </article>
+  );
 
   return (
     <div className="glossary">
@@ -92,7 +180,10 @@ export default function Glossary() {
         </button>
         <button
           className={`pill pill-button ${mode === "concept" ? "pill-accent" : "pill-neutral"}`}
-          onClick={() => setMode("concept")}
+          onClick={() => {
+            setConceptError(null);
+            setMode("concept");
+          }}
         >
           개념
         </button>
@@ -134,6 +225,25 @@ export default function Glossary() {
 
       {mode === "concept" && (
         <>
+          <input
+            type="search"
+            className="search-input"
+            aria-label="개념 제목과 본문 검색"
+            placeholder="개념 제목·본문 검색..."
+            value={conceptQuery}
+            onChange={(e) => setConceptQuery(e.target.value)}
+          />
+          {conceptError && <p className="status-message error">{conceptError}</p>}
+          {loggedIn ? (
+            <label className="bookmark-filter">
+              <input type="checkbox" checked={bookmarksOnly} disabled={!bookmarksLoaded}
+                onChange={(e) => setBookmarksOnly(e.target.checked)} />
+              북마크한 개념만 보기
+            </label>
+          ) : (
+            <p className="bookmark-hint"><Link to="/login">로그인</Link>하면 다시 공부할 개념을 북마크할 수 있어요.</p>
+          )}
+          {bookmarkError && <p role="alert" className="status-message error">{bookmarkError}</p>}
           <div className="view-switcher">
             {CONCEPT_VIEWS.map((v) => (
               <button
@@ -147,17 +257,14 @@ export default function Glossary() {
           </div>
 
           {conceptView === "" ? (
-            !conceptsLoaded ? (
+            conceptError ? null : !conceptsLoaded ? (
               <p className="status-message">불러오는 중...</p>
             ) : concepts.length === 0 ? (
               <p className="status-message">아직 모아둔 개념이 없어요.</p>
+            ) : filteredConcepts.length === 0 ? (
+              <p className="status-message">{bookmarksOnly ? "조건에 맞는 북마크가 없어요. 검색어나 필터를 바꿔보세요." : "검색 결과가 없어요. 다른 검색어로 찾아보세요."}</p>
             ) : (
-              concepts.map((c) => (
-                <article key={c.id} className="card clickable" onClick={() => setSelectedConcept(c)}>
-                  <h3>{c.heading}</h3>
-                  <p className="digest-summary">{c.body}</p>
-                </article>
-              ))
+              filteredConcepts.map(renderConcept)
             )
           ) : (
             <>
@@ -178,12 +285,14 @@ export default function Glossary() {
               {selectedTag && (
                 <>
                   <p className="status-message">{selectedTag.description}</p>
-                  {tagConcepts.map((c) => (
-                    <article key={c.id} className="card clickable" onClick={() => setSelectedConcept(c)}>
-                      <h3>{c.heading}</h3>
-                      <p className="digest-summary">{c.body}</p>
-                    </article>
-                  ))}
+                  {tagLoading && <p className="status-message">불러오는 중...</p>}
+                  {tagError && <p className="status-message error">{tagError}</p>}
+                  {!tagLoading && !tagError && filteredTagConcepts.length === 0 && (
+                    <p className="status-message">
+                      {tagConcepts.length === 0 ? "아직 이 태그에 모아둔 개념이 없어요." : bookmarksOnly ? "조건에 맞는 북마크가 없어요. 검색어나 필터를 바꿔보세요." : "검색 결과가 없어요. 다른 검색어로 찾아보세요."}
+                    </p>
+                  )}
+                  {!tagLoading && !tagError && filteredTagConcepts.map(renderConcept)}
                 </>
               )}
             </>

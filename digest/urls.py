@@ -21,6 +21,8 @@ from .views import (
     TagLearningItemsView,
     ChapterLessonsView,
     LessonDetailView,
+    ConceptBookmarkListView,
+    ConceptBookmarkView,
 )
 
 router = DefaultRouter()
@@ -29,6 +31,8 @@ router.register("terms", TermViewSet, basename="term")
 router.register("questions", QuestionViewSet, basename="question")
 
 urlpatterns = [
+    path("concept-bookmarks/", ConceptBookmarkListView.as_view(), name="concept-bookmark-list"),
+    path("concept-bookmarks/<int:pk>/", ConceptBookmarkView.as_view(), name="concept-bookmark"),
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/signup/", SignupView.as_view(), name="signup"),
     path("auth/account/", AccountView.as_view(), name="account"),

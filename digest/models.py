@@ -78,6 +78,17 @@ class LearningItem(models.Model):
         return self.heading, self.body
 
 
+class ConceptBookmark(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    item = models.ForeignKey(LearningItem, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "item"], name="concept_bookmark_user_item_unique"),
+        ]
+
+
 class Term(models.Model):
     """용어 사전. 처음 나온 다이제스트를 참조로 남겨서 출처를 추적한다."""
 

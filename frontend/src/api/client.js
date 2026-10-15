@@ -142,6 +142,17 @@ export const reviewApi = {
 };
 
 // 용어 상세 팝업용
+export const bookmarkApi = {
+  getIds: () => get("/concept-bookmarks/"),
+  set: async (id, saved) => {
+    const res = await fetch(`${API_BASE}/concept-bookmarks/${id}/`, {
+      method: saved ? "PUT" : "DELETE",
+      headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error("북마크 변경에 실패했어요. 다시 시도해 주세요.");
+  },
+};
+
 export const termApi = {
   getDetail: (id) => get(`/terms/${id}/`),
 };

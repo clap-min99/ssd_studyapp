@@ -57,6 +57,13 @@ python manage.py migrate
 기존 용어·복습 기록은 유지. 현재 Cloud Run 컨테이너 시작 명령에는 마이그레이션이 포함되지 않으므로
 배포 전 대상 DB에 별도 적용 필요.
 
+## 개념 북마크 DB 적용
+
+개념 북마크는 `0017_conceptbookmark` 마이그레이션으로 추가되는 계정별 저장 테이블을 사용한다.
+새 백엔드 배포 전에 대상 DB에 `python manage.py migrate`를 실행한다.
+Cloud Run 컨테이너 시작 시 자동 적용되지 않는다. 프론트엔드는 마이그레이션과 백엔드 배포 후 배포한다.
+기존 개념과 용어 데이터는 유지되며, 계정 또는 개념을 삭제하면 해당 북마크도 삭제된다.
+
 ## Gmail 인증 복구
 
 로컬은 `fetcher/credentials.json`과 `fetcher/token.json`을 사용하고,

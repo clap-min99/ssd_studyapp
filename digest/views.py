@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import DailyActivity, DailyDigest, Insight, Lesson, Question, ReviewRecord, Term, Tag, Article, LearningItem
-from .models import ReviewSession
+from .models import ReviewSession, ConceptBookmark
 from .serializers import (
     DailyDigestDetailSerializer,
     DailyDigestListSerializer,
@@ -29,6 +29,27 @@ from .serializers import (
     ArticleSerializer,
     LearningItemSerializer
 )
+
+
+class ConceptBookmarkListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        ids = ConceptBookmark.objects.filter(user=request.user).order_by("-created_at", "-pk").values_list("item_id", flat=True)
+        return Response(list(ids))
+
+
+class ConceptBookmarkView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        item = get_object_or_404(LearningItem, pk=pk)
+        ConceptBookmark.objects.get_or_create(user=request.user, item=item)
+        return Response({"bookmarked": True})
+
+    def delete(self, request, pk):
+        ConceptBookmark.objects.filter(user=request.user, item_id=pk).delete()
+        return Response(status=204)
 
 
 class LoginView(APIView):
