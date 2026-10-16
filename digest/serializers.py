@@ -207,6 +207,8 @@ class TagDetailSerializer(TagSerializer):
         return obj.prerequisite.name if obj.prerequisite else None
 
     def _next_chapter(self, obj):
+        if hasattr(obj, "ordered_next_chapters"):
+            return next(iter(obj.ordered_next_chapters), None)
         return obj.next_chapters.filter(order__gt=0).order_by("order").first()
 
     def get_next_slug(self, obj):

@@ -15,15 +15,15 @@ from digest.models import Article, DailyDigest, LearningItem, Tag
 from digest.serializers import DailyDigestDetailSerializer
 from fetcher.openai_parser import parse_digest
 from fetcher.gmail_client import _decode_body
-from fetcher.source_order import order_from_source, source_offset
+from fetcher.source_order import order_from_source, source_offset, validate_numbered_sources
 
 
 HEADINGS = [f"SSD {i}" for i in range(1, 4)] + [f"자동차 {i}" for i in range(1, 4)]
 
 
 def mail_and_response(count=6, articles=True):
-    learning = [dict(heading=h, body=f"설명 {h}", source_text=f"{h}\n설명 {h}") for h in HEADINGS[:count]]
-    news = [dict(title=f"기사 {i}", category=cat, source_text=f"기사 {i}\n기사 본문 {i}")
+    learning = [dict(heading=h, body=f"{h} 설명입니다.", source_text=f"{h}\n설명 {h}") for h in HEADINGS[:count]]
+    news = [dict(title=f"기사 {i}", summary=f"기사 {i} 요약입니다.", category=cat, source_text=f"기사 {i}\n기사 본문 {i}")
             for i, cat in enumerate(("ssd", "automotive"), 1)] if articles else []
     raw = "\n\n".join(item["source_text"] for item in news + learning)
     # Simulate exactly the observed rotation, and reversed article output.
@@ -42,6 +42,18 @@ def openai_client(response):
 
 
 class SourceOrderTests(SimpleTestCase):
+    def test_numbered_source_validation_ignores_indented_steps_and_detects_missing_siblings(self):
+        for first, second in (("(1)", "(2)"), ("1)", "2)"), ("①", "②")):
+            with self.subTest(first=first):
+                source = f"{first} 첫 주제\n본문\n  1) 내부 단계\n  2) 내부 단계"
+                raw = f"{source}\n\n{second} 다음 주제\n본문"
+                item = SimpleNamespace(heading="첫 주제", source_text=source)
+                validate_numbered_sources(source, [item])
+                with self.assertRaisesMessage(ValueError, "누락되거나 합쳐졌습니다"):
+                    validate_numbered_sources(raw, [item])
+        with self.assertRaisesMessage(ValueError, "카드가 없습니다"):
+            validate_numbered_sources("(1) 제목\n본문", [])
+
     def test_gmail_decode_preserves_order(self):
         mail, _ = mail_and_response()
         encoded = base64.urlsafe_b64encode(mail["body"].encode()).decode()
@@ -104,6 +116,24 @@ class DigestOrderTests(TestCase):
             with self.subTest(count=count):
                 self.fetch(count, articles=False, force=True)
                 self.assert_feed(DailyDigest.objects.get(), count, article_count=0)
+
+    def test_three_numbered_ssd_items_keep_separate_details_without_title_numbers(self):
+        mail, response = mail_and_response(count=3, articles=False)
+        for item in response["learning_items"]:
+            number = HEADINGS.index(item["heading"]) + 1
+            item["heading"] = f"({number}) {item['heading']}"
+            item["source_text"] = f"({number}) {item['source_text']}"
+        mail["body"] = "\n\n".join(item["source_text"] for item in sorted(
+            response["learning_items"], key=lambda item: item["heading"]))
+        with patch("digest.management.commands.fetch_digest.fetch_latest_digest", return_value=mail), \
+             patch("fetcher.openai_parser._get_client", return_value=openai_client(response)), \
+             patch("digest.management.commands.fetch_digest.explain_item", side_effect=lambda title, *args: f"{title} 상세 설명입니다."):
+            call_command("fetch_digest", stdout=StringIO())
+        self.assert_feed(DailyDigest.objects.get(), 3, article_count=0)
+        for item in LearningItem.objects.order_by("position"):
+            detail = self.api.get(f"/api/content/learning-item/{item.pk}/").json()
+            self.assertEqual(detail["deep_dive"], f"{item.heading} 상세 설명입니다.")
+            self.assertEqual(detail["source_text"], f"({item.position}) {item.heading}\n설명 {item.heading}")
 
     def test_force_replaces_positions_and_skip_preserves_existing_items(self):
         self.fetch()

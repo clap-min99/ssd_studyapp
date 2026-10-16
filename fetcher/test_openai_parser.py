@@ -9,12 +9,48 @@ from openai import OpenAI
 
 from fetcher.ai_schemas import AnswerOutput, DigestOutput, SourcesOutput, TagsOutput
 from fetcher.openai_parser import (
-    _get_client, check_term_answer, explain_item, extract_sources, get_model,
+    _card_summary, _get_client, _valid_card_summary, check_term_answer, explain_item, extract_sources, get_model,
     parse_digest, tag_article, tag_term,
 )
 
 
 class OpenAIParserTests(SimpleTestCase):
+    def test_card_summary_checks_length_style_and_numbering(self):
+        for text in ("", "설명이다.", "설명입니다. 다음이다.", "(1) 설명입니다.", "1) 설명입니다.", "① 설명입니다.", "# 설명입니다.", "- 설명입니다.", "가" * 350 + "입니다."):
+            with self.subTest(text=text):
+                self.assertFalse(_valid_card_summary(text, 350))
+        self.assertTrue(_valid_card_summary("개념 설명입니다.\n\n필요한 이유를 설명합니다.", 350))
+
+    def test_only_invalid_summaries_are_rewritten_and_checked(self):
+        with patch("fetcher.openai_parser._generate_json", return_value={"summary": "핵심을 설명합니다."}) as generate:
+            self.assertEqual(_card_summary("정상 요약입니다.", "제목", "원문", "학습", 350), "정상 요약입니다.")
+            generate.assert_not_called()
+            self.assertEqual(_card_summary("너무 긴 설명이다." * 50, "제목", "원문", "학습", 350), "핵심을 설명합니다.")
+            generate.assert_called_once()
+            generate.return_value = {"summary": "여전히 반말이다."}
+            with self.assertRaisesMessage(ValueError, "요약 길이·문체 검증 실패"):
+                _card_summary("반말이다.", "제목", "원문", "학습", 350)
+
+    def test_title_number_cleanup_preserves_technical_numbers(self):
+        items = [dict(heading=title, body="학습 내용입니다.", source_text=f"{title}\n원문")
+                 for title in ("(1) NAND", "2) FTL", "③ NVMe", "3.3V 전원", "3D NAND")]
+        raw = "\n\n".join(item["source_text"] for item in items)
+        with patch("fetcher.openai_parser._generate_json", return_value={"learning_items": items}):
+            parsed = parse_digest(raw)
+        self.assertEqual([item.heading for item in parsed.learning_items], ["NAND", "FTL", "NVMe", "3.3V 전원", "3D NAND"])
+        self.assertEqual(parsed.learning_items[0].source_text, items[0]["source_text"])
+
+    def test_merged_numbered_items_are_retried_then_kept_separate(self):
+        items = [dict(heading=f"({i}) 주제 {i}", body="개념 설명입니다.", source_text=f"({i}) 주제 {i}\n원문 {i}") for i in range(1, 4)]
+        raw = "\n\n".join(item["source_text"] for item in items)
+        merged = {"learning_items": [dict(items[0], source_text=raw)]}
+        with patch("fetcher.openai_parser._generate_json", side_effect=[merged, {"learning_items": items}]) as generate:
+            result = parse_digest(raw)
+        self.assertEqual(len(result.learning_items), 3)
+        self.assertEqual(generate.call_count, 2)
+        with patch("fetcher.openai_parser._generate_json", return_value=merged), self.assertRaisesMessage(ValueError, "누락되거나 합쳐졌습니다"):
+            parse_digest(raw)
+
     def mock_client(self, result=None, text=""):
         client = Mock()
         client.responses.parse.return_value = SimpleNamespace(status="completed", output_parsed=result)

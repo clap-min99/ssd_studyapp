@@ -135,6 +135,23 @@ class ReviewSessionTests(TestCase):
         for card in data["session"]["terms"]:
             self.assertEqual(card["options"], [card["meaning"]])
 
+    def test_choice_deduplicates_meanings_before_limiting_candidates(self):
+        Term.objects.all().delete()
+        Term.objects.bulk_create([
+            Term(term=f"A{i:03}", meaning=" same " if i % 2 else "same")
+            for i in range(100)
+        ] + [Term(term=f"Z{i}", meaning=f"other {i}") for i in range(3)])
+        self.tag.terms.add(*Term.objects.all())
+        for tagged in (True, False):
+            with self.subTest(tagged=tagged):
+                if not tagged:
+                    self.tag.terms.clear()
+                data = self.start(mode="choice", tag=self.tag.slug if tagged else "")
+                self.assertTrue(data["session"]["terms"])
+                for card in data["session"]["terms"]:
+                    self.assertEqual(set(card["options"]), {"same", "other 0", "other 1", "other 2"})
+                    self.assertEqual(len(card["options"]), 4)
+
     def test_preferences_and_sessions_are_deleted_with_account(self):
         self.start()
         user_id = self.user.pk

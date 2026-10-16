@@ -42,6 +42,10 @@ class AnswerOutput(BaseModel):
     feedback: str
 
 
+class CardSummaryOutput(BaseModel):
+    summary: str
+
+
 class TagsOutput(BaseModel):
     tags: list[str]
 

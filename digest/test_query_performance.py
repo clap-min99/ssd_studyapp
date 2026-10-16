@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
-from digest.models import Article, DailyDigest, ReviewRecord, Term
+from digest.models import Article, DailyDigest, ReviewRecord, Tag, Term
 
 
 class ReadQueryPerformanceTests(TestCase):
@@ -57,3 +57,17 @@ class ReadQueryPerformanceTests(TestCase):
         self.assertEqual(data[0]["categories"], ["ssd"])
         self.assertEqual(data[1]["categories"], ["automotive"])
         self.assertTrue(all(d["article_count"] == 1 for d in data))
+
+    def test_chapter_navigation_uses_two_queries(self):
+        previous = Tag.objects.create(slug="previous", name="Previous", category="ssd", order=1)
+        chapter = Tag.objects.create(slug="current", name="Current", category="ssd", order=2, prerequisite=previous)
+        Tag.objects.create(slug="unlisted", name="Unlisted", category="ssd", order=0, prerequisite=chapter)
+        following = Tag.objects.create(slug="following", name="Following", category="ssd", order=3, prerequisite=chapter)
+        count, data = self.read("/api/tags/current/")
+        self.assertEqual(count, 2)
+        self.assertEqual((data["prerequisite_slug"], data["prerequisite_name"]), (previous.slug, previous.name))
+        self.assertEqual((data["next_slug"], data["next_name"]), (following.slug, following.name))
+        count, data = self.read("/api/tags/following/")
+        self.assertEqual(count, 2)
+        self.assertIsNone(data["next_slug"])
+        self.assertIsNone(data["next_name"])

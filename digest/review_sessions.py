@@ -3,6 +3,7 @@ import random
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
+from django.db.models.functions import Trim
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
@@ -50,11 +51,12 @@ def session_data(user, session=None):
         topic_meanings = {}
         fallback = []
         if session.mode == "choice" and ordered:
+            meanings = (Term.objects.order_by().annotate(candidate_meaning=Trim("meaning"))
+                .exclude(candidate_meaning="").values_list("candidate_meaning", flat=True).distinct())
             slugs = {tag.slug for term in ordered for tag in term.tags.all()}
             for slug in slugs:
-                topic_meanings[slug] = list(Term.objects.filter(tags__slug=slug)
-                    .exclude(meaning="").values_list("meaning", flat=True)[:30])
-            fallback = list(Term.objects.exclude(meaning="").values_list("meaning", flat=True)[:100])
+                topic_meanings[slug] = list(meanings.filter(tags__slug=slug)[:30])
+            fallback = list(meanings[:100])
         for card, term in zip(cards, ordered):
             card["tags"] = [tag.slug for tag in term.tags.all()]
             card["is_new"] = term.pk in session.new_term_ids

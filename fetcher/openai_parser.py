@@ -8,14 +8,15 @@ OPENAI_TAG_MODEL 설정은 기본 모델보다 우선 적용.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 
-from fetcher.source_order import order_from_source
+from fetcher.source_order import order_from_source, validate_numbered_sources
 
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from fetcher.ai_schemas import AnswerOutput, DigestOutput, SourcesOutput, TagsOutput
+from fetcher.ai_schemas import AnswerOutput, CardSummaryOutput, DigestOutput, SourcesOutput, TagsOutput
 
 load_dotenv()
 
@@ -60,13 +61,19 @@ SYSTEM_PROMPT = """\
 
 규칙:
 - 최우선은 원문의 독립된 기사·학습 항목을 빠짐없이 각각 별도 카드로 추출하는 것이다. 먼저 항목을 분리한 다음, 각 카드의 내용만 짧게 요약하라.
+- 뉴스 섹션의 사건·발표·기업 소식은 기술 설명이 포함되어도 articles로, 학습 섹션의 개념 설명은 learning_items로 분류하라. SSD/자동차는 분야이며 기사/학습 구분 기준이 아니다. 같은 항목을 양쪽 배열에 중복으로 넣지 마라.
 - 1·2·3, 1)·2)·3), ①·②·③ 등으로 구분되고 각각 고유한 제목·주제를 가진 항목은 하나당 articles 또는 learning_items의 객체 하나로 만들어라. 같은 분야나 비슷한 주제라는 이유로 여러 항목을 하나의 객체로 합치거나 누락하지 마라.
 - SSD/자동차 같은 분야 제목이나 '오늘의 학습 콘텐츠' 같은 상위 섹션 제목을 카드 제목으로 삼아 그 아래 여러 항목을 한 카드에 몰아넣지 마라. title·heading에는 개별 항목의 제목을 사용하라.
 - 분야별로 번호가 다시 1부터 시작해도 서로 다른 항목으로 유지하라. 단, 한 항목 본문 안의 설명 단계·예시·하위 목록은 그 항목에 포함하고 별도 카드로 쪼개지 마라.
 - 분리 예시: SSD 학습 섹션에 '① NAND 구조', '② FTL 매핑', '③ GC 동작', 자동차 학습 섹션에 '① CAN 통신', '② AUTOSAR 구조'가 각각 독립된 제목과 본문으로 있으면 learning_items는 원문 순서대로 5개다. heading은 각각 'NAND 구조', 'FTL 매핑', 'GC 동작', 'CAN 통신', 'AUTOSAR 구조'이고, 분야별 2개나 통합 1개로 만들면 안 된다. 실제 항목 수는 매일 원문에 맞춰 결정하라.
-- summary와 learning_items의 body는 카드만 읽어도 해당 항목의 전체적인 내용을 이해할 수 있는 한국어 요약이다. 제목을 풀어 쓰는 데 그치지 말고 원문의 주요 설명과 맥락을 담아라. 요약을 위해 카드 개수를 줄이지 마라.
-- 기사 summary는 3~5문장, 공백 포함 300~500자를 권장한다. 무엇이 달라졌는지, 주요 사실·수치·비교, 그 변화의 배경이나 영향을 원문에 있는 범위에서 설명하라.
-- learning_items의 body는 4~6문장, 공백 포함 400~700자를 권장한다. 핵심 개념, 동작 원리나 주요 단계, 왜 필요한지와 원문의 대표 예시·주의점을 담아 학습 흐름을 이해할 수 있게 하라.
+- summary와 learning_items의 body는 메인 카드용 한국어 요약이다. 원문을 읽지 않아도 핵심과 맥락을 이해할 수 있게 쓰되, 원문의 모든 설명을 옮기거나 문장마다 표현만 바꾸지 마라. 요약을 위해 카드 개수를 줄이지 마라.
+- title과 heading 앞에는 (1), (2), 1), 1., ① 같은 항목 번호를 붙이지 마라. 번호는 source_text에만 그대로 보존하라. 본문 요약에도 번호·목록·소제목을 붙이지 마라.
+- summary, learning_items의 body, insight는 모두 중립적인 설명체 존댓말로 통일하라. 모든 문장은 '~합니다', '~입니다', '~됩니다', '~있습니다' 같은 합쇼체로 끝내라. '~한다', '~이다', '~해요'와 섞지 마라. 과장·감탄·독자에게 말 걸기는 피하라.
+- 기사 summary는 3~4문장, 공백 포함 180~300자를 권장한다. 무슨 일이 있었는지, 핵심 사실·수치, 왜 중요한지를 원문에 있는 범위에서 설명하라. 세부 사례·부수적인 수치·반복 설명은 생략하라.
+- 기사 summary의 최대 길이는 공백 포함 300자다. 문장은 끝까지 완성하라.
+- learning_items의 body는 3~4문장, 공백 포함 220~350자를 권장한다. 어떤 개념인지, 핵심 동작 원리, 왜 필요한지를 설명하고 이해에 꼭 필요한 주의점만 남겨라. 세부 구현 단계나 예시를 모두 나열하지 마라.
+- learning_items의 body의 최대 길이는 공백 포함 350자다. 처음 등장하는 핵심 약어는 이해에 필요한 경우 짧게 풀어서 설명하라.
+- 분량은 목표를 채우기 위한 최소 길이가 아니다. 보통 원문 본문의 절반 안팎으로 줄이되, 이해에 필요한 조건·인과관계·주의점을 없애면서 억지로 줄이거나 글자 수에 맞춰 문장을 자르지 마라.
 - 원문이 짧으면 권장 분량을 채우려고 내용을 반복하거나 배경지식을 덧붙이지 마라. 원문에 없는 사실은 추가하지 말고, 긴 부연이나 반복만 생략하라. 문장을 중간에 자르지 마라.
 - 요약은 관련된 문장끼리 묶어 2개의 짧은 문단으로 나누고 문단 사이에 빈 줄을 넣어라. 짧은 원문은 한 문단으로 작성해도 된다. 마크다운 제목이나 목록 기호는 사용하지 마라.
 - insight는 개발·학습 관점의 의미를 1문장, 공백 포함 80자 이내로 작성하라. summary의 내용을 반복하지 마라.
@@ -152,11 +159,57 @@ def _none_to_empty(d: dict) -> dict:
     return cleaned
 
 
+ITEM_NUMBER = r"(?:\(\d+\)|\d+\)|\d+\.(?=\s)|[①-⑳])\s*"
+
+
+def _valid_card_summary(text, limit):
+    if not text or len(text) > limit or re.search(rf"(?m)^\s*(?:{ITEM_NUMBER}|#|[-*•]\s)", text):
+        return False
+    return all(sentence.endswith("니다.") for sentence in re.split(r"(?<=[.!?])\s+", text))
+
+
+def _card_summary(text, title, source, kind, limit):
+    text = text.strip()
+    if _valid_card_summary(text, limit):
+        return text
+    sentences = "1문장" if kind == "인사이트" else "3~4문장"
+    instructions = (
+        f"주어진 {kind} 항목 하나를 메인 카드용 한국어 요약으로 작성하라. 공백 포함 최대 {limit}자, {sentences}을 권장한다. "
+        "모든 문장은 중립적인 설명체 존댓말 '~합니다/~입니다/~됩니다/~있습니다' 형태로 끝내라. "
+        "제목, 번호, 목록, 소제목은 쓰지 마라. 원문에 있는 핵심과 인과관계를 보존하고, 세부 나열과 반복은 생략하라. "
+        "기사는 사건·핵심 사실·의미를, 학습 항목은 개념·핵심 원리·필요한 이유를, 인사이트는 개발·학습 관점의 의미를 설명하라. "
+        "짧은 원문은 억지로 늘리지 말고, 보통 원문 본문의 절반 안팎으로 줄여라. 문장을 자르거나 원문에 없는 사실을 추가하지 마라."
+    )
+    result = _generate_json(f"제목: {title}\n원문:\n{source}", CardSummaryOutput, "parse", instructions)
+    text = result["summary"].strip()
+    if not _valid_card_summary(text, limit):
+        raise ValueError(f"요약 길이·문체 검증 실패: {title}")
+    return text
+
+
 def parse_digest(raw_text: str) -> ParsedDigest:
     """다이제스트 원문을 OpenAI API로 구조화한다."""
 
     data = _generate_json(raw_text, DigestOutput, "parse", SYSTEM_PROMPT)
 
+    try:
+        parsed = _digest_from_data(raw_text, data)
+    except ValueError as exc:
+        data = _generate_json(raw_text, DigestOutput, "parse", SYSTEM_PROMPT +
+            f"\n이전 추출의 검증 오류: {exc}\n원문의 독립 항목을 빠짐없이 각각 별도 객체로 다시 추출하라.")
+        parsed = _digest_from_data(raw_text, data)
+    for item in parsed.articles:
+        item.title = re.sub(rf"^\s*{ITEM_NUMBER}", "", item.title).strip()
+        item.summary = _card_summary(item.summary, item.title, item.source_text or raw_text, "기사", 300)
+        if item.insight:
+            item.insight = _card_summary(item.insight, item.title, item.source_text or raw_text, "인사이트", 80)
+    for item in parsed.learning_items:
+        item.heading = re.sub(rf"^\s*{ITEM_NUMBER}", "", item.heading).strip()
+        item.body = _card_summary(item.body, item.heading, item.source_text or raw_text, "학습", 350)
+    return parsed
+
+
+def _digest_from_data(raw_text, data):
     parsed = ParsedDigest(
         date=data.get("date"),
         articles=[Article(**_none_to_empty(a)) for a in data.get("articles", [])],
@@ -166,6 +219,7 @@ def parse_digest(raw_text: str) -> ParsedDigest:
     )
     parsed.articles = order_from_source(raw_text, parsed.articles, "title")
     parsed.learning_items = order_from_source(raw_text, parsed.learning_items, "heading")
+    validate_numbered_sources(raw_text, parsed.articles + parsed.learning_items)
     return parsed
 
 
@@ -213,6 +267,8 @@ DEEP_DIVE_SYSTEM_PROMPT = """\
 다이제스트 메일 원문 전체와, 그 안의 항목 하나(기사 또는 학습 콘텐츠)가 주어진다.
 이 항목을 처음 보는 사람도 이해할 수 있게 마크다운으로 풀어서 설명하라.
 원문에 없는 사실을 지어내지 말고, 일반적인 배경지식은 배경지식이라고 구분해서 써라.
+중립적인 설명체 존댓말 '~합니다/~입니다'로 문체를 통일하라. 제목과 섹션명 앞에는 (1), (2) 같은 번호를 붙이지 마라.
+주어진 항목 하나에 집중하고, 메일의 다른 독립 항목을 이 카드의 설명에 섞지 마라.
 
 아래 섹션을 이 순서대로, ## 헤딩으로 작성하라.
 

@@ -453,7 +453,10 @@ class TagDetailView(generics.RetrieveAPIView):
     """
     GET /api/tags/{slug}/  -> 챕터 상세 (레슨 본문, 선행 챕터 포함)
     """
-    queryset = Tag.objects.all()
+    queryset = Tag.objects.select_related("prerequisite").prefetch_related(Prefetch(
+        "next_chapters", queryset=Tag.objects.filter(order__gt=0).order_by("order"),
+        to_attr="ordered_next_chapters",
+    ))
     serializer_class = TagDetailSerializer
     lookup_field = "slug"
     permission_classes = [AllowAny]
