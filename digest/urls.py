@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .review_sessions import ReviewSessionView
 
 from .views import (
+    ContentDetailView,
     DailyDigestViewSet,
     DeepDiveView,
     DueReviewsView,
@@ -31,6 +32,7 @@ router.register("terms", TermViewSet, basename="term")
 router.register("questions", QuestionViewSet, basename="question")
 
 urlpatterns = [
+    path("content/<str:kind>/<int:pk>/", ContentDetailView.as_view(), name="content-detail"),
     path("concept-bookmarks/", ConceptBookmarkListView.as_view(), name="concept-bookmark-list"),
     path("concept-bookmarks/<int:pk>/", ConceptBookmarkView.as_view(), name="concept-bookmark"),
     path("auth/login/", LoginView.as_view(), name="login"),

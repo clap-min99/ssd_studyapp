@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Privacy from './pages/Privacy';
 import StreakBadge from "./components/StreakBadge";
+import Wordmark from "./components/Wordmark";
 import { auth } from "./api/client";
 import "./App.css";
 
@@ -36,8 +37,10 @@ export default function App() {
   return (
     <div className="app">
       <main className="main-content">
-        <div className="topbar">
-           <StreakBadge refreshKey={streakVersion} />
+        <header className="brand-header">
+          <NavLink to="/" className="brand-home" aria-label="SSD Tech Log 홈">
+            <Wordmark />
+          </NavLink>
           <div className="topbar-right">
             <NavLink className="topbar-username" to="/account" aria-label="계정 관리">
               {auth.getUsername()}
@@ -46,6 +49,9 @@ export default function App() {
               로그아웃
             </button>
           </div>
+        </header>
+        <div className="topbar">
+          <StreakBadge refreshKey={streakVersion} />
         </div>
 
         <Routes>

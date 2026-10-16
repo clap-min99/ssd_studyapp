@@ -1,0 +1,17 @@
+.brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+.brand-home { display: block; min-width: 0; flex: 0 1 190px; border-radius: 4px; }
+.brand-header .topbar-right { min-width: 0; max-width: 45%; margin-left: auto; }
+.brand-header .topbar-username { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-header .logout-link { flex-shrink: 0; white-space: nowrap; }
+.brand-home:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+.login-screen h1 { margin-bottom: 24px; }
+.wordmark { display: block; width: 190px; max-width: 100%; height: auto; }
+.wordmark-large { width: 280px; margin: 0 auto; }

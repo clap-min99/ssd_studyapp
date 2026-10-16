@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { marked } from "marked";
-import { auth, deepDiveApi } from "../api/client";
+import { api, auth, deepDiveApi } from "../api/client";
 import Modal from "./Modal";
 
 /** 기사/학습 카드를 눌렀을 때 뜨는 상세 팝업.
@@ -9,6 +9,25 @@ export default function ItemDetail({ kind, item, rawText, onClose }) {
   const [deepDive, setDeepDive] = useState(item.deep_dive);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [detail, setDetail] = useState(item);
+  const [detailLoaded, setDetailLoaded] = useState(item.deep_dive !== undefined);
+  const [detailError, setDetailError] = useState(null);
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    if (item.deep_dive !== undefined) return;
+    let active = true;
+    setDetailError(null);
+    api.getContentDetail(kind, item.id)
+      .then((data) => {
+        if (!active) return;
+        setDetail(data);
+        setDeepDive(data.deep_dive);
+        setDetailLoaded(true);
+      })
+      .catch((e) => active && setDetailError(e.message));
+    return () => { active = false; };
+  }, [kind, item.id, item.deep_dive, retry]);
 
   const generate = () => {
     setLoading(true);
@@ -16,7 +35,6 @@ export default function ItemDetail({ kind, item, rawText, onClose }) {
     deepDiveApi
       .generate(kind, item.id)
       .then((data) => {
-        item.deep_dive = data.deep_dive; // 팝업을 다시 열 때 재요청하지 않도록 목록 데이터에도 반영
         setDeepDive(data.deep_dive);
       })
       .catch((e) => setError(e.message))
@@ -32,7 +50,10 @@ export default function ItemDetail({ kind, item, rawText, onClose }) {
 
       <div className="term-detail-block">
         <p className="term-detail-label">AI 심화 해설</p>
-        {deepDive ? (
+        {!detailLoaded ? (
+          detailError ? <p role="alert">{detailError} <button className="pill pill-button" onClick={() => setRetry((value) => value + 1)}>다시 시도</button></p>
+            : <p role="status">해설을 불러오는 중...</p>
+        ) : deepDive ? (
           <div className="lesson-content" dangerouslySetInnerHTML={{ __html: marked.parse(deepDive) }} />
         ) : auth.isLoggedIn() ? (
           <button className="pill pill-button pill-accent" onClick={generate} disabled={loading}>
@@ -44,14 +65,14 @@ export default function ItemDetail({ kind, item, rawText, onClose }) {
         {error && <p className="status-message error">{error}</p>}
       </div>
 
-      {(item.source_text || rawText) && (
+      {(detail.source_text || detail.raw_text || rawText) && (
         <details className="term-detail-block">
           <summary className="term-detail-label">
             {/* source_text가 없는 예전 데이터는 메일 전체로 대체 */}
-            {item.source_text ? "메일 원문 보기" : "메일 원문 전체 보기"}
+            {detail.source_text ? "메일 원문 보기" : "메일 원문 전체 보기"}
           </summary>
           <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit" }}>
-            {item.source_text || rawText}
+            {detail.source_text || detail.raw_text || rawText}
           </pre>
         </details>
       )}

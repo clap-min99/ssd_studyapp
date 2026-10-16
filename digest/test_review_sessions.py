@@ -123,12 +123,17 @@ class ReviewSessionTests(TestCase):
     def test_empty_meanings_excluded_and_decoys_prefer_topic(self):
         self.terms[11].meaning = "  "
         self.terms[11].save()
-        data = self.start(category="automotive")
+        data = self.start(category="automotive", mode="choice")
         self.assertEqual(len(data["session"]["terms"]), 1)
-        data = self.start(tag="nand")
+        data = self.start(tag="nand", mode="choice")
         for card in data["session"]["terms"]:
             self.assertTrue(all(value.startswith("Meaning ") for value in card["options"]))
             self.assertNotIn("Meaning 10", card["options"])
+
+    def test_written_review_does_not_build_decoys(self):
+        data = self.start(mode="written")
+        for card in data["session"]["terms"]:
+            self.assertEqual(card["options"], [card["meaning"]])
 
     def test_preferences_and_sessions_are_deleted_with_account(self):
         self.start()

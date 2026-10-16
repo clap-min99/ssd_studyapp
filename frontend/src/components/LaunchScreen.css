@@ -1,0 +1,47 @@
+.launch-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #091c20;
+  background-image: radial-gradient(ellipse at 50% 43%, #143c3e 0%, transparent 65%),
+    linear-gradient(#53d5bd08 1px, transparent 1px),
+    linear-gradient(90deg, #53d5bd08 1px, transparent 1px);
+  background-size: auto, 36px 36px, 36px 36px;
+  color: #effffb;
+  text-align: center;
+  padding: 24px;
+  pointer-events: none;
+  animation: launch-exit 250ms ease-in 1050ms forwards;
+}
+
+.launch-screen { background: #fafafa; }
+.launch-brand { width: 100%; max-width: 360px; animation: launch-enter 400ms ease-out both; }
+.launch-eyebrow, .launch-footer {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #82b4ad;
+}
+.launch-chip { margin: 26px auto 22px; }
+.launch-chip img { display: block; margin: auto; box-shadow: 0 0 60px #53d5bd18; border-radius: 26px; }
+.launch-title { font-size: clamp(26px, 7vw, 34px); font-weight: 750; letter-spacing: -1px; margin: 0; }
+.launch-title span { color: #53d5bd; margin-left: 4px; }
+.launch-tagline { color: #a4bdbb; font-size: 13px; line-height: 1.6; margin: 12px 0 0; word-break: keep-all; }
+.launch-signal { display: flex; justify-content: center; gap: 6px; margin-top: 30px; }
+.launch-signal span { width: 18px; height: 3px; border-radius: 2px; background: #53d5bd; animation: launch-signal 750ms ease-in-out infinite alternate; }
+.launch-signal span:nth-child(2) { animation-delay: 150ms; }
+.launch-signal span:nth-child(3) { animation-delay: 300ms; }
+.launch-footer { position: absolute; bottom: max(32px, env(safe-area-inset-bottom)); font-size: 9px; letter-spacing: 2px; }
+.login-brand-mark { display: block; width: 76px; height: 76px; margin: 0 auto 18px; }
+.login-brand-label { color: var(--accent); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 2px; margin: 0 0 10px; }
+
+@keyframes launch-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes launch-exit { to { opacity: 0; visibility: hidden; } }
+@keyframes launch-signal { from { opacity: .25; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .launch-screen { animation: launch-exit 1ms linear 1050ms forwards; }
+  .launch-brand, .launch-signal span { animation: none; }
+}

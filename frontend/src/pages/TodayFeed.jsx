@@ -15,12 +15,13 @@ export default function TodayFeed() {
 
   const [view, setView] = useState("");
   const [tags, setTags] = useState([]);
+  const [tagsError, setTagsError] = useState(null);
   const [selectedTag, setSelectedTag] = useState(null);
   const [tagArticles, setTagArticles] = useState([]);
 
   useEffect(() => {
     api.getLatestDigest().then(setDigest).catch((e) => setError(e.message)).finally(() => setLoading(false));
-    api.getTags().then(setTags);
+    api.getTags().then(setTags).catch((e) => setTagsError(e.message));
   }, []);
 
   const changeView = (value) => {
@@ -61,6 +62,7 @@ export default function TodayFeed() {
 
       {view !== "" && (
         <div>
+          {tagsError && <p className="status-message error">{tagsError}</p>}
           <div className="tag-row">
             {filteredTags.map((t) => (
               <button

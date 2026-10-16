@@ -45,6 +45,16 @@ class LearningItemSerializer(serializers.ModelSerializer):
         fields = ["id", "position", "heading", "body", "source_text", "deep_dive"]
 
 
+class ArticleListSerializer(ArticleSerializer):
+    class Meta(ArticleSerializer.Meta):
+        fields = ["id", "position", "title", "links", "summary", "insight", "category"]
+
+
+class LearningItemListSerializer(LearningItemSerializer):
+    class Meta(LearningItemSerializer.Meta):
+        fields = ["id", "position", "heading", "body"]
+
+
 class DigestSummarySerializer(serializers.ModelSerializer):
     """다른 시리얼라이저 안에 중첩해서 쓰는 가벼운 다이제스트 요약 (id/날짜/제목만)."""
 
@@ -80,6 +90,8 @@ class TermSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return None
+        if hasattr(obj, "current_user_reviews"):
+            return obj.current_user_reviews[0].familiarity if obj.current_user_reviews else "new"
         record = obj.review_records.filter(user=request.user).first()
         return record.familiarity if record else "new"
 
@@ -104,7 +116,7 @@ class DailyDigestListSerializer(serializers.ModelSerializer):
         fields = ["id", "date", "subject", "article_count", "categories"]
 
     def get_categories(self, obj):
-        return sorted(set(obj.articles.values_list("category", flat=True)))
+        return sorted({article.category for article in obj.articles.all()})
 
 
 class DailyDigestDetailSerializer(serializers.ModelSerializer):
@@ -125,6 +137,14 @@ class DailyDigestDetailSerializer(serializers.ModelSerializer):
             "learning_items",
             "terms",
         ]
+
+
+class CompactDigestSerializer(DailyDigestDetailSerializer):
+    articles = ArticleListSerializer(many=True, read_only=True)
+    learning_items = LearningItemListSerializer(many=True, read_only=True)
+
+    class Meta(DailyDigestDetailSerializer.Meta):
+        fields = [field for field in DailyDigestDetailSerializer.Meta.fields if field != "raw_text"]
 
 
 class DueTermSerializer(serializers.ModelSerializer):

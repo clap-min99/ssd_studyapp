@@ -46,18 +46,29 @@ def session_data(user, session=None):
         by_id = {term.pk: term for term in terms}
         ordered = [by_id[pk] for pk in session.term_ids if pk in by_id]
         cards = DueTermSerializer(ordered, many=True).data
+        # 객관식 후보는 문제마다 재조회하지 않고 주제별로 한 번만 가져온다.
+        topic_meanings = {}
+        fallback = []
+        if session.mode == "choice" and ordered:
+            slugs = {tag.slug for term in ordered for tag in term.tags.all()}
+            for slug in slugs:
+                topic_meanings[slug] = list(Term.objects.filter(tags__slug=slug)
+                    .exclude(meaning="").values_list("meaning", flat=True)[:30])
+            fallback = list(Term.objects.exclude(meaning="").values_list("meaning", flat=True)[:100])
         for card, term in zip(cards, ordered):
             card["tags"] = [tag.slug for tag in term.tags.all()]
             card["is_new"] = term.pk in session.new_term_ids
-            candidates = Term.objects.exclude(pk=term.pk).exclude(meaning="").exclude(meaning=term.meaning)
-            related = candidates.filter(tags__slug__in=card["tags"]).values_list("meaning", flat=True).distinct()[:30]
+            card["meaning"] = term.meaning.strip()
+            card["options"] = [card["meaning"]]
+            if session.mode != "choice":
+                continue
+            related = [value for slug in card["tags"] for value in topic_meanings.get(slug, [])]
             preferred = list(dict.fromkeys(value.strip() for value in related if value.strip() and value.strip() != term.meaning.strip()))
             random.shuffle(preferred)
             decoys = preferred[:3]
             if len(decoys) < 3:
-                fallback = list(candidates.values_list("meaning", flat=True)[:100])
-                random.shuffle(fallback)
-                for value in fallback:
+                shuffled_fallback = random.sample(fallback, len(fallback))
+                for value in shuffled_fallback:
                     value = value.strip()
                     if value and value != term.meaning.strip() and value not in decoys:
                         decoys.append(value)

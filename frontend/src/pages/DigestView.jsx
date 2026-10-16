@@ -90,6 +90,7 @@ export default function DigestView({ digest }) {
 
       {selectedItem && (
         <ItemDetail
+          key={`${selectedItem.kind}-${selectedItem.item.id}`}
           {...selectedItem}
           rawText={digest.raw_text}
           onClose={() => setSelectedItem(null)}

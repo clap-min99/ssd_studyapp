@@ -1,5 +1,9 @@
+import { createReadCache } from "./readCache";
+
 const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000/api";
 const TOKEN_STORAGE_KEY = "ssd_digest_token";
+const readCache = createReadCache();
+const CONTENT_TTL = 60_000;
 
 export const auth = {
   getToken: () => localStorage.getItem(TOKEN_STORAGE_KEY),
@@ -39,6 +43,7 @@ export const auth = {
   },
 
   logout: () => {
+    readCache.clear();
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(`${TOKEN_STORAGE_KEY}_username`);
   },
@@ -62,8 +67,14 @@ function authHeaders() {
   return token ? { Authorization: `Token ${token}` } : {};
 }
 
-async function get(path) {
-  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() });
+function get(path, ttl = 0) {
+  const headers = authHeaders();
+  const key = JSON.stringify([headers.Authorization || "", path]);
+  return readCache.read(key, () => fetchJson(path, headers), ttl);
+}
+
+async function fetchJson(path, headers) {
+  const res = await fetch(`${API_BASE}${path}`, { headers });
   if (res.status === 401 && auth.isLoggedIn()) {
     // 저장된 토큰이 서버에 없음(DB 변경·토큰 삭제 등) -> 로그아웃 후 로그인 화면으로
     auth.logout();
@@ -76,18 +87,19 @@ async function get(path) {
 }
 
 export const api = {
-  getLatestDigest: () => get("/digests/latest/"),
-  getDigestList: () => get("/digests/"),
-  getDigestDetail: (id) => get(`/digests/${id}/`),
+  getLatestDigest: () => get("/digests/latest/?compact=1"),
+  getDigestList: () => get("/digests/", CONTENT_TTL),
+  getDigestDetail: (id) => get(`/digests/${id}/?compact=1`),
   getTerms: () => get("/terms/"),
-  getTags: () => get("/tags/"),
-  getTagDetail: (slug) => get(`/tags/${slug}/`),
+  getTags: () => get("/tags/", CONTENT_TTL),
+  getTagDetail: (slug) => get(`/tags/${slug}/`, CONTENT_TTL),
   getTagTerms: (slug) => get(`/tags/${slug}/terms/`),
-  getChapterLessons: (slug) => get(`/tags/${slug}/lessons/`),
-  getLessonDetail: (id) => get(`/lessons/${id}/`),
-  getTagArticles: (slug) => get(`/tags/${slug}/articles/`),
-  getLearningItems: () => get("/learning-items/"),
-  getTagLearningItems: (slug) => get(`/tags/${slug}/learning-items/`),
+  getChapterLessons: (slug) => get(`/tags/${slug}/lessons/`, CONTENT_TTL),
+  getLessonDetail: (id) => get(`/lessons/${id}/`, CONTENT_TTL),
+  getTagArticles: (slug) => get(`/tags/${slug}/articles/?compact=1`, CONTENT_TTL),
+  getLearningItems: () => get("/learning-items/?compact=1", CONTENT_TTL),
+  getTagLearningItems: (slug) => get(`/tags/${slug}/learning-items/?compact=1`, CONTENT_TTL),
+  getContentDetail: (kind, id) => get(`/content/${kind}/${id}/`, CONTENT_TTL),
 };
 
 export const CATEGORY_LABEL = {
@@ -168,6 +180,7 @@ export const deepDiveApi = {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.detail || "AI 해설 요청에 실패했어요.");
     }
+    readCache.clear();
     return res.json();
   },
 };

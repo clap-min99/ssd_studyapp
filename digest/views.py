@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import mixins, viewsets, generics
@@ -29,6 +30,18 @@ from .serializers import (
     ArticleSerializer,
     LearningItemSerializer
 )
+from .serializers import ArticleListSerializer, LearningItemListSerializer, CompactDigestSerializer
+
+
+def terms_for_request(request):
+    terms = Term.objects.select_related("first_seen_digest")
+    if request.user.is_authenticated:
+        terms = terms.prefetch_related(Prefetch(
+            "review_records",
+            queryset=ReviewRecord.objects.filter(user=request.user),
+            to_attr="current_user_reviews",
+        ))
+    return terms
 
 
 class ConceptBookmarkListView(APIView):
@@ -113,8 +126,31 @@ class DailyDigestViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = DailyDigest.objects.all()
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action in ("retrieve", "latest"):
+            compact = self.request.query_params.get("compact") == "1"
+            articles = Article.objects.all()
+            learning_items = LearningItem.objects.all()
+            if compact:
+                qs = qs.defer("raw_text")
+                articles = articles.defer("source_text", "deep_dive")
+                learning_items = learning_items.defer("source_text", "deep_dive")
+            return qs.prefetch_related(
+                Prefetch("articles", queryset=articles),
+                Prefetch("learning_items", queryset=learning_items),
+                Prefetch("first_seen_terms", queryset=terms_for_request(self.request)),
+            )
+        if self.action == "list":
+            return qs.defer("raw_text").prefetch_related(Prefetch(
+                "articles", queryset=Article.objects.only("id", "digest_id", "category"),
+            ))
+        return qs
+
     def get_serializer_class(self):
         if self.action == "retrieve" or self.action == "latest":
+            if self.request.query_params.get("compact") == "1":
+                return CompactDigestSerializer
             return DailyDigestDetailSerializer
         return DailyDigestListSerializer
 
@@ -181,6 +217,12 @@ class TermViewSet(
     serializer_class = TermSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    def get_queryset(self):
+        qs = terms_for_request(self.request)
+        if self.action == "retrieve":
+            qs = qs.prefetch_related("appeared_in")
+        return qs
+
     def get_serializer_class(self):
         if self.action == "retrieve":
             return TermDetailSerializer
@@ -246,6 +288,24 @@ class DeepDiveView(APIView):
             item.save(update_fields=["deep_dive"])
 
         return Response({"deep_dive": item.deep_dive})
+
+
+class ContentDetailView(APIView):
+    """원문과 저장된 AI 해설은 카드를 열 때만 전송한다. AI 생성은 기존 POST 사용."""
+    permission_classes = [AllowAny]
+
+    def get(self, request, kind, pk):
+        if kind == "article":
+            model, serializer_class = Article, ArticleSerializer
+        elif kind == "learning-item":
+            model, serializer_class = LearningItem, LearningItemSerializer
+        else:
+            return Response({"detail": "알 수 없는 종류입니다."}, status=404)
+        item = get_object_or_404(model.objects.select_related("digest"), pk=pk)
+        data = dict(serializer_class(item).data)
+        if not item.source_text:
+            data["raw_text"] = item.digest.raw_text
+        return Response(data)
 
 
 class DueReviewsView(APIView):
@@ -424,21 +484,35 @@ class TagTermsView(generics.ListAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        return Term.objects.filter(tags__slug=self.kwargs["slug"])
+        return terms_for_request(self.request).filter(tags__slug=self.kwargs["slug"])
 
 class TagArticlesView(generics.ListAPIView):
     serializer_class = ArticleSerializer
     permission_classes = [AllowAny]
+    def get_serializer_class(self):
+        return ArticleListSerializer if self.request.query_params.get("compact") == "1" else ArticleSerializer
     def get_queryset(self):
-        return Article.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date', 'position')
+        qs = Article.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date', 'position')
+        return qs.defer("source_text", "deep_dive") if self.request.query_params.get("compact") == "1" else qs
 
 class TagLearningItemsView(generics.ListAPIView):
     serializer_class = LearningItemSerializer
     permission_classes = [AllowAny]
+
+    def get_serializer_class(self):
+        return LearningItemListSerializer if self.request.query_params.get("compact") == "1" else LearningItemSerializer
     def get_queryset(self):
-        return LearningItem.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date', 'position')
+        qs = LearningItem.objects.filter(tags__slug=self.kwargs['slug']).order_by('-digest__date', 'position')
+        return qs.defer("source_text", "deep_dive") if self.request.query_params.get("compact") == "1" else qs
 
 class LearningItemListView(generics.ListAPIView):
     queryset = LearningItem.objects.all().order_by('-digest__date', 'position')
     serializer_class = LearningItemSerializer
     permission_classes = [AllowAny]
+
+    def get_serializer_class(self):
+        return LearningItemListSerializer if self.request.query_params.get("compact") == "1" else LearningItemSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.defer("source_text", "deep_dive") if self.request.query_params.get("compact") == "1" else qs

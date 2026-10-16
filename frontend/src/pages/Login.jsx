@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { auth } from "../api/client";
+import Wordmark from "../components/Wordmark";
 
 export default function Login({ onLoggedIn }) {
   const [username, setUsername] = useState("");
@@ -33,7 +34,7 @@ export default function Login({ onLoggedIn }) {
 
   return (
     <div className="login-screen">
-      <h1>SSD Tech Log</h1>
+      <h1><Wordmark large /></h1>
       <p className="feed-subject">{signup ? "계정을 만들고 학습을 시작하세요" : "개인 학습 기록 — 로그인이 필요해요"}</p>
 
       <form className="login-form" onSubmit={handleSubmit}>

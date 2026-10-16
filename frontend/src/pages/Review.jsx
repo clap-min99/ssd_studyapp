@@ -26,6 +26,7 @@ export default function Review({ onAnswered }) {
 
   const [summary, setSummary] = useState(null);
   const [tags, setTags] = useState([]);
+  const [tagsError, setTagsError] = useState(null);
   const [setup, setSetup] = useState(true);
   const [settings, setSettings] = useState({ daily_goal: 10, category: "", tag: "", date: "", weak_only: false });
   const [saving, setSaving] = useState(false);
@@ -43,13 +44,14 @@ export default function Review({ onAnswered }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([reviewApi.getSession(), api.getTags()]).then(([data, tagList]) => {
+    reviewApi.getSession().then((data) => {
       if (!active) return;
       applySession(data);
-      setTags(tagList);
       setSettings({ daily_goal: data.daily_goal, category: "", tag: "", weak_only: false,
         ...data.session?.scope, date: data.session?.scope.date || "" });
     }).catch((err) => active && setError(err.message)).finally(() => active && setLoading(false));
+    api.getTags().then((data) => active && setTags(data))
+      .catch(() => active && setTagsError("주제 목록을 불러오지 못했어요. 전체 범위 복습은 사용할 수 있어요."));
     return () => { active = false; };
   }, []);
 
@@ -119,8 +121,10 @@ export default function Review({ onAnswered }) {
     }
   }
 
-  if (loading) return <p className="status-message">불러오는 중...</p>;
-  if (!summary) return <p role="alert">{error || "복습 정보를 불러오지 못했어요."}</p>;
+  if (loading || !summary) return <div className="review">
+    <header className="page-header"><h1>오늘의 복습</h1></header>
+    {loading ? <p className="status-message">불러오는 중...</p> : <p role="alert">{error || "복습 정보를 불러오지 못했어요."}</p>}
+  </div>;
 
   const displayedGoal = setup ? settings.daily_goal : summary.daily_goal;
   const goalMet = summary.completed_today >= displayedGoal;
@@ -131,7 +135,7 @@ export default function Review({ onAnswered }) {
   </div>;
 
   if (setup) return <div className="review">
-    <h1>오늘의 복습</h1>
+    <header className="page-header"><h1>오늘의 복습</h1></header>
     {progress}
     {current && <button className="btn-primary" disabled={saving} onClick={() => {
       setSettings({ daily_goal: summary.daily_goal, ...summary.session.scope, date: summary.session.scope.date || "" });
@@ -149,6 +153,7 @@ export default function Review({ onAnswered }) {
       <label>주제<select value={settings.tag} onChange={(event) => setSettings({ ...settings, tag: event.target.value })}>
         <option value="">전체 주제</option>{tags.filter((tag) => !settings.category || tag.category === settings.category).map((tag) => <option key={tag.slug} value={tag.slug}>{tag.name}</option>)}
       </select></label>
+      {tagsError && <p role="alert">{tagsError}</p>}
       <label>다이제스트 날짜 (선택)<input type="date" value={settings.date} onChange={(event) => setSettings({ ...settings, date: event.target.value })} /></label>
       <label>문제 방식<select value={mode} onChange={(event) => setMode(event.target.value)}><option value="written">서술형</option><option value="choice">객관식</option></select></label>
       <label className="review-check"><input type="checkbox" checked={settings.weak_only} onChange={(event) => setSettings({ ...settings, weak_only: event.target.checked })} /> 틀리거나 헷갈린 용어만</label>
@@ -160,7 +165,7 @@ export default function Review({ onAnswered }) {
   </div>;
 
   if (!current) return <div className="review">
-    <h1>{goalMet ? "오늘 목표 완료!" : totalDueAtStart ? "이번 복습 완료!" : "학습할 용어가 없어요"}</h1>
+    <header className="page-header"><h1>{goalMet ? "오늘 목표 완료!" : totalDueAtStart ? "이번 복습 완료!" : "학습할 용어가 없어요"}</h1></header>
     {progress}
     <p className="status-message">{goalMet ? "오늘 정한 분량을 마쳤어요. 원하면 조금 더 학습할 수 있어요." : "선택한 범위의 복습을 마쳤거나, 새 용어의 하루 한도에 도달했어요. 다른 주제를 선택하거나 내일 이어가세요."}</p>
     <button className="btn-primary" onClick={() => { setError(null); setSetup(true); }}>학습 설정으로</button>
@@ -170,6 +175,7 @@ export default function Review({ onAnswered }) {
 
   return (
     <div className="review">
+      <header className="page-header"><h1>오늘의 복습</h1></header>
       {progress}
       <div className="review-topbar">
         <button className="logout-link" disabled={saving || aiLoading} onClick={() => { if (picked !== null) goNext(); setSetup(true); }}>저장하고 나가기</button>

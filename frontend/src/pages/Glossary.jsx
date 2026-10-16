@@ -169,7 +169,7 @@ export default function Glossary() {
 
   return (
     <div className="glossary">
-      <h1>{mode === "term" ? "용어 사전" : "개념 모음"}</h1>
+      <header className="page-header"><h1>{mode === "term" ? "용어 사전" : "개념 모음"}</h1></header>
 
       <div className="view-switcher">
         <button

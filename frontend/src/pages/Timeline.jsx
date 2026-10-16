@@ -15,14 +15,15 @@ export default function Timeline() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="status-message">불러오는 중...</p>;
-  if (error) return <p className="status-message error">{error}</p>;
-  if (digests.length === 0) return <p className="status-message">아직 쌓인 기록이 없어요.</p>;
-
   return (
     <div className="timeline">
-      <h1>타임라인</h1>
-      {digests.map((d) => (
+      <header className="page-header">
+        <h1>타임라인</h1>
+      </header>
+      {loading && <p className="status-message">불러오는 중...</p>}
+      {error && <p className="status-message error">{error}</p>}
+      {!loading && !error && digests.length === 0 && <p className="status-message">아직 쌓인 기록이 없어요.</p>}
+      {!loading && !error && digests.map((d) => (
         <Link to={`/digest/${d.id}`} key={d.id} className="card timeline-item">
           <div className="timeline-date">{d.date}</div>
           <div className="timeline-meta">

@@ -21,32 +21,43 @@ export default function ChapterDetail() {
   const [error, setError] = useState(null);
   const [tab, setTab] = useState("lesson");
   const [selectedTermId, setSelectedTermId] = useState(null);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [tabError, setTabError] = useState(null);
+  const [tabRetry, setTabRetry] = useState(0);
 
   useEffect(() => {
     let active = true;
     setChapter(null);
     setError(null);
     setTab("lesson");
+    setLessons([]);
+    setTerms([]);
+    setArticles([]);
 
-    Promise.all([
-      api.getTagDetail(slug),
-      api.getChapterLessons(slug),
-      api.getTagTerms(slug),
-      api.getTagArticles(slug),
-    ])
-      .then(([chapterData, lessonsData, termsData, articlesData]) => {
-        if (!active) return;
-        setChapter(chapterData);
-        setLessons(lessonsData);
-        setTerms(termsData);
-        setArticles(articlesData);
-      })
+    api.getTagDetail(slug)
+      .then((data) => active && setChapter(data))
       .catch((e) => active && setError(e.message));
 
     return () => {
       active = false;
     };
   }, [slug]);
+
+  useEffect(() => {
+    let active = true;
+    setTabLoading(true);
+    setTabError(null);
+    const request = tab === "lesson" ? api.getChapterLessons(slug)
+      : tab === "terms" ? api.getTagTerms(slug) : api.getTagArticles(slug);
+    request.then((data) => {
+      if (!active) return;
+      if (tab === "lesson") setLessons(data);
+      else if (tab === "terms") setTerms(data);
+      else setArticles(data);
+    }).catch((e) => active && setTabError(e.message))
+      .finally(() => active && setTabLoading(false));
+    return () => { active = false; };
+  }, [slug, tab, tabRetry]);
 
   const lessonHtml = useMemo(() => {
     if (!chapter?.lesson_body) return "";
@@ -87,13 +98,13 @@ export default function ChapterDetail() {
             onClick={() => setTab(t.key)}
           >
             {t.label}
-            {t.key === "terms" && ` (${terms.length})`}
-            {t.key === "articles" && ` (${articles.length})`}
           </button>
         ))}
       </div>
 
-      {tab === "lesson" &&
+      {tabLoading && <p className="status-message" role="status">불러오는 중...</p>}
+      {tabError && <p className="status-message error" role="alert">{tabError} <button className="pill pill-button" onClick={() => setTabRetry((value) => value + 1)}>다시 시도</button></p>}
+      {!tabLoading && !tabError && tab === "lesson" &&
         (lessons.length > 0 ? (
           lessons.map((l) => (
             <article
@@ -113,7 +124,7 @@ export default function ChapterDetail() {
           <p className="status-message">레슨 콘텐츠는 아직 준비 중이에요.</p>
         ))}
 
-      {tab === "terms" &&
+      {!tabLoading && !tabError && tab === "terms" &&
         (terms.length === 0 ? (
           <p className="status-message">아직 연결된 용어가 없어요.</p>
         ) : (
@@ -129,7 +140,7 @@ export default function ChapterDetail() {
           ))
         ))}
 
-      {tab === "articles" &&
+      {!tabLoading && !tabError && tab === "articles" &&
         (articles.length === 0 ? (
           <p className="status-message">아직 이 챕터에 태그된 기사가 없어요.</p>
         ) : (

@@ -36,9 +36,9 @@ export default function Chapters() {
 
   return (
     <div>
-      <h1>챕터</h1>
+      <header className="page-header"><h1>챕터</h1></header>
 
-      <div className="view-switcher" style={{ marginTop: 12 }}>
+      <div className="view-switcher">
         {TRACKS.map((t) => (
           <button
             key={t.value}

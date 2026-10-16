@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { marked } from 'marked'
 import './index.css'
 import App from './App.jsx'
+import LaunchScreen from './components/LaunchScreen.jsx'
 
 // CommonMark 규칙상 "**FTL(...)**은"처럼 닫는 ** 앞이 문장부호이고 뒤에 조사가 붙으면
 // 굵게가 안 먹는다. 한국어에선 흔해서 **...**는 무조건 굵게 처리한다 (앱 전체 marked에 적용).
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <App />
+      <LaunchScreen />
     </BrowserRouter>
   </StrictMode>,
 )
