@@ -10,17 +10,21 @@ export default function DigestDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
+    setError(null);
+    setDigest(null);
     api
       .getDigestDetail(id)
-      .then(setDigest)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .then((data) => active && setDigest(data))
+      .catch((e) => active && setError(e.message))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
   }, [id]);
 
   if (loading) return <p className="status-message">불러오는 중...</p>;
   if (error) return <p className="status-message error">{error}</p>;
   if (!digest) return null;
 
-  return <DigestView digest={digest} />;
+  return <DigestView key={digest.id} digest={digest} />;
 }

@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.db import IntegrityError, transaction
-from django.db.models import Prefetch
+from django.db.models import Exists, OuterRef, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import mixins, viewsets, generics
@@ -119,7 +119,8 @@ class AccountView(APIView):
 
 class DailyDigestViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    GET /api/digests/            -> 타임라인용 목록 (가벼운 버전)
+    GET /api/digests/            -> 보관된 다이제스트 목록
+    GET /api/digests/dates/      -> 콘텐츠가 있는 날짜와 ID (달력용)
     GET /api/digests/{id}/       -> 상세 (기사/학습콘텐츠/용어 전부 포함)
     GET /api/digests/latest/     -> 가장 최근 다이제스트 (오늘의 피드용)
     """
@@ -140,6 +141,7 @@ class DailyDigestViewSet(viewsets.ReadOnlyModelViewSet):
                 Prefetch("articles", queryset=articles),
                 Prefetch("learning_items", queryset=learning_items),
                 Prefetch("first_seen_terms", queryset=terms_for_request(self.request)),
+                Prefetch("mentioned_terms", queryset=terms_for_request(self.request)),
             )
         if self.action == "list":
             return qs.defer("raw_text").prefetch_related(Prefetch(
@@ -155,8 +157,20 @@ class DailyDigestViewSet(viewsets.ReadOnlyModelViewSet):
         return DailyDigestListSerializer
 
     @action(detail=False, methods=["get"])
+    def dates(self, request):
+        return Response(list(self.content_queryset().values("id", "date")))
+
+    def content_queryset(self):
+        return self.get_queryset().filter(
+            Exists(Article.objects.filter(digest_id=OuterRef("pk")))
+            | Exists(LearningItem.objects.filter(digest_id=OuterRef("pk")))
+            | Exists(Term.objects.filter(first_seen_digest_id=OuterRef("pk")))
+            | Exists(Term.objects.filter(appeared_in=OuterRef("pk")))
+        )
+
+    @action(detail=False, methods=["get"])
     def latest(self, request):
-        digest = self.get_queryset().first()  # Meta.ordering = ["-date"]
+        digest = self.content_queryset().first()  # Meta.ordering = ["-date"]
         if digest is None:
             return Response({"detail": "아직 저장된 다이제스트가 없습니다."}, status=404)
         serializer = self.get_serializer(digest)

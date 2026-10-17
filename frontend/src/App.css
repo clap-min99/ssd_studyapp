@@ -101,6 +101,34 @@ h3 {
   margin-bottom: 20px;
 }
 
+.feed-date-row, .calendar-month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.feed-date-button {
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: inherit;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.calendar-title { margin: 0 36px 8px 0; color: var(--ink); font-size: 18px; }
+.calendar-hint { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+.calendar-month { margin-bottom: 16px; }
+.calendar-month h3 { margin: 0; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.calendar-weekday { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 8px; }
+.calendar-day { min-height: 42px; border: 1px solid var(--accent-soft); border-radius: 10px; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; }
+.calendar-day:disabled { background: transparent; border-color: transparent; color: #b9bdc3; cursor: default; }
+.calendar-selected { background: var(--accent); color: white; font-weight: 700; }
+.calendar-month button:disabled { opacity: 0.35; cursor: default; }
+
 .feed-subject {
   color: var(--muted);
   font-size: 13px;
@@ -409,12 +437,22 @@ h3 {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(20, 20, 20, 0.45);
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 100;
 }
+
+.modal-backdrop:not([open]) { display: none; }
+.modal-backdrop::backdrop { background: rgba(20, 20, 20, 0.45); }
 
 .modal-sheet {
   position: relative;
@@ -731,6 +769,7 @@ h3 {
 
 /* --- 레슨 본문 (마크다운 렌더링) --- */
 .lesson-content {
+  overflow-wrap: anywhere;
   font-size: 15px;
   line-height: 1.75;
   color: #2d3036;
@@ -771,10 +810,46 @@ h3 {
 }
 
 .lesson-content svg {
+  width: 100%;
   max-width: 100%;
   height: auto;
   display: block;
   margin: 18px auto;
+}
+
+.lesson-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 16px 0;
+}
+
+.lesson-content th, .lesson-content td {
+  padding: 7px 5px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.lesson-content pre {
+  overflow-x: auto;
+}
+
+.lesson-content details {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.lesson-content summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.lesson-content details[open] summary {
+  margin-bottom: 12px;
 }
 
 .lesson-content .diagram-caption {

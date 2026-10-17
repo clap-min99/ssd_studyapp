@@ -249,7 +249,7 @@ class Tag(models.Model):
     slug = models.SlugField(unique=True)
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=200)
-    category = models.CharField(max_length=20, choices=[('ssd', 'SSD'), ('automotive', '자동차')])
+    category = models.CharField(max_length=20, choices=[('ssd', 'SSD'), ('automotive', '자동차'), ('foundations', '컴퓨터 구조 기초')])
     order = models.PositiveIntegerField(default=0)
     prerequisite = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="next_chapters"

@@ -89,6 +89,7 @@ async function fetchJson(path, headers) {
 export const api = {
   getLatestDigest: () => get("/digests/latest/?compact=1"),
   getDigestList: () => get("/digests/", CONTENT_TTL),
+  getDigestDates: () => get("/digests/dates/", CONTENT_TTL),
   getDigestDetail: (id) => get(`/digests/${id}/?compact=1`),
   getTerms: () => get("/terms/"),
   getTags: () => get("/tags/", CONTENT_TTL),
@@ -103,11 +104,13 @@ export const api = {
 };
 
 export const CATEGORY_LABEL = {
+  foundations: "컴퓨터 구조 기초",
   ssd: "SSD/NAND",
   automotive: "자동차 SW",
 };
 
 export const CATEGORY_BADGE_CLASS = {
+  foundations: "badge-ssd",
   ssd: "badge-ssd",
   automotive: "badge-automotive",
 };

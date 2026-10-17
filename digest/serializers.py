@@ -124,7 +124,11 @@ class DailyDigestDetailSerializer(serializers.ModelSerializer):
 
     articles = ArticleSerializer(many=True, read_only=True)
     learning_items = LearningItemSerializer(many=True, read_only=True)
-    terms = TermSerializer(many=True, read_only=True, source="first_seen_terms")
+    terms = serializers.SerializerMethodField()
+
+    def get_terms(self, obj):
+        terms = {term.pk: term for term in [*obj.first_seen_terms.all(), *obj.mentioned_terms.all()]}
+        return TermSerializer(sorted(terms.values(), key=lambda term: term.term), many=True, context=self.context).data
 
     class Meta:
         model = DailyDigest

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 import TodayFeed from "./pages/TodayFeed";
 import Timeline from "./pages/Timeline";
 import DigestDetail from "./pages/DigestDetail";
@@ -17,6 +17,7 @@ import { auth } from "./api/client";
 import "./App.css";
 
 export default function App() {
+  const location = useLocation();
   const [loggedIn, setLoggedIn] = useState(auth.isLoggedIn());
   const [streakVersion, setStreakVersion] = useState(0);
   if (!loggedIn) {
@@ -69,13 +70,9 @@ export default function App() {
       </main>
 
       <nav className="bottom-nav">
-        <NavLink to="/" end className="nav-item">
+        <NavLink to="/" end className={`nav-item${location.pathname.startsWith("/digest/") ? " active" : ""}`}>
           <span className="nav-icon">📰</span>
           오늘
-        </NavLink>
-        <NavLink to="/timeline" className="nav-item">
-          <span className="nav-icon">🗂️</span>
-          타임라인
         </NavLink>
         <NavLink to="/chapters" className="nav-item">
           <span className="nav-icon">📚</span>

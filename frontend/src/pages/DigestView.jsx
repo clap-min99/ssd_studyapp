@@ -1,19 +1,29 @@
 import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { CATEGORY_BADGE_CLASS, CATEGORY_LABEL } from "../api/client";
 import TermDetail from "../components/TermDetail";
 import DigestNotes from "../components/DigestNotes";
 import ItemDetail from "../components/ItemDetail";
+import DigestCalendar from "../components/DigestCalendar";
 
 /** 다이제스트 상세 데이터를 받아서 렌더링하는 공용 컴포넌트.
- *  TodayFeed(최신 1건)와 DigestDetail(타임라인에서 클릭한 특정 날짜)이 공유한다. */
+ *  TodayFeed(최신 1건)와 DigestDetail(달력에서 고른 날짜)이 공유한다. */
 export default function DigestView({ digest }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedTermId, setSelectedTermId] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null); // { kind, item }
 
   return (
     <div className="feed">
       <header className="feed-header">
-        <h1>{digest.date}</h1>
+        <div className="feed-date-row">
+          <h1><button className="feed-date-button" onClick={() => setCalendarOpen(true)} aria-label={`${digest.date} 날짜 선택`} aria-haspopup="dialog" aria-expanded={calendarOpen}>
+            <time dateTime={digest.date}>{digest.date}</time><span aria-hidden="true"> ▾</span>
+          </button></h1>
+          {location.pathname !== "/" && <Link className="pill pill-neutral" to="/">최신으로</Link>}
+        </div>
         <p className="feed-subject">{digest.subject}</p>
       </header>
 
@@ -54,7 +64,7 @@ export default function DigestView({ digest }) {
 
       {digest.learning_items.length > 0 && (
         <section>
-          <h2>오늘의 학습 콘텐츠</h2>
+          <h2>학습 콘텐츠</h2>
           {digest.learning_items.map((li) => (
             <article
               key={li.id}
@@ -70,7 +80,7 @@ export default function DigestView({ digest }) {
 
       {digest.terms.length > 0 && (
         <section>
-          <h2>새로운 용어</h2>
+          <h2>이날의 용어</h2>
           {digest.terms.map((t) => (
             <article
               key={t.id}
@@ -83,6 +93,11 @@ export default function DigestView({ digest }) {
           ))}
         </section>
       )}
+
+      {calendarOpen && <DigestCalendar selectedDate={digest.date} onClose={() => setCalendarOpen(false)} onSelect={(id) => {
+        setCalendarOpen(false);
+        navigate(`/digest/${id}`);
+      }} />}
 
       {selectedTermId && (
         <TermDetail termId={selectedTermId} onClose={() => setSelectedTermId(null)} />
