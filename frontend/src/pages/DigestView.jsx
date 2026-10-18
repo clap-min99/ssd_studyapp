@@ -5,6 +5,7 @@ import TermDetail from "../components/TermDetail";
 import DigestNotes from "../components/DigestNotes";
 import ItemDetail from "../components/ItemDetail";
 import DigestCalendar from "../components/DigestCalendar";
+import { isSafeWebUrl } from "../components/safeUrl.js";
 
 /** 다이제스트 상세 데이터를 받아서 렌더링하는 공용 컴포넌트.
  *  TodayFeed(최신 1건)와 DigestDetail(달력에서 고른 날짜)이 공유한다. */
@@ -44,7 +45,7 @@ export default function DigestView({ digest }) {
               {a.insight && <p className="insight">💡 {a.insight}</p>}
               {a.links.length > 0 && (
                 <div className="links">
-                  {a.links.map((link) => (
+                  {a.links.filter(isSafeWebUrl).map((link) => (
                     <a
                       key={link}
                       href={link}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { marked } from "marked";
+import { renderMarkdown } from "./markdown.js";
 import { api, auth, deepDiveApi } from "../api/client";
 import Modal from "./Modal";
 
@@ -54,7 +54,7 @@ export default function ItemDetail({ kind, item, rawText, onClose }) {
           detailError ? <p role="alert">{detailError} <button className="pill pill-button" onClick={() => setRetry((value) => value + 1)}>다시 시도</button></p>
             : <p role="status">해설을 불러오는 중...</p>
         ) : deepDive ? (
-          <div className="lesson-content" dangerouslySetInnerHTML={{ __html: marked.parse(deepDive) }} />
+          <div className="lesson-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(deepDive) }} />
         ) : auth.isLoggedIn() ? (
           <button className="pill pill-button pill-accent" onClick={generate} disabled={loading}>
             {loading ? "해설 만드는 중... (최대 1분)" : "AI로 자세히 풀어보기"}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, CATEGORY_BADGE_CLASS, CATEGORY_LABEL } from "../api/client";
 import DigestView from "./DigestView";
+import { isSafeWebUrl } from "../components/safeUrl.js";
 
 const VIEWS = [
   { value: "", label: "오늘" },
@@ -88,7 +89,7 @@ export default function TodayFeed() {
                   {a.insight && <p className="insight">💡 {a.insight}</p>}
                   {a.links.length > 0 && (
                     <div className="links">
-                      {a.links.map((link) => (
+                      {a.links.filter(isSafeWebUrl).map((link) => (
                         <a key={link} href={link} target="_blank" rel="noreferrer">
                           원문 링크
                         </a>

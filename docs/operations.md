@@ -6,6 +6,14 @@
 
 OpenAI API 키와 모델 전환 설정: [OpenAI 설정 문서](openai.md).
 
+## 프론트엔드 HTML 보안
+
+- 레슨·챕터·AI 해설은 `frontend/src/components/markdown.js`에서 Markdown 변환 후 DOMPurify로 정제한다. 새 HTML 렌더링 경로도 이 함수를 사용한다.
+- Vercel의 `frontend/vercel.json`은 CSP로 인라인 스크립트·eval·외부 프레임 삽입을 차단한다. React 스타일을 위해 인라인 CSS는 허용한다.
+- API 도메인이 바뀌면 `VITE_API_BASE`와 CSP의 `connect-src`를 함께 갱신한다. CSP는 Vercel 배포 후 실제 응답 헤더와 로그인·학습 화면에서 확인한다.
+- 인증 정보는 탭의 `sessionStorage`에 저장하며 JavaScript에서 읽을 수 있다. HttpOnly 쿠키 기반 인증으로 전환한 상태는 아니다.
+- 이 변경은 Supabase 권한이나 백업을 변경하지 않는다. 별도로 확인하고 조치해야 한다.
+
 ## 배포 (Google Cloud Run)
 
 ```bash

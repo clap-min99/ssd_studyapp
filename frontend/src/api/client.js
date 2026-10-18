@@ -1,14 +1,18 @@
-import { createReadCache } from "./readCache";
+import { createReadCache } from "./readCache.js";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000/api";
+const API_BASE = import.meta.env?.VITE_API_BASE || "http://127.0.0.1:8000/api";
 const TOKEN_STORAGE_KEY = "ssd_digest_token";
 const readCache = createReadCache();
 const CONTENT_TTL = 60_000;
 
+// 이전 버전에서 영구 저장한 인증 정보는 재사용하지 않는다.
+localStorage.removeItem(TOKEN_STORAGE_KEY);
+localStorage.removeItem(`${TOKEN_STORAGE_KEY}_username`);
+
 export const auth = {
-  getToken: () => localStorage.getItem(TOKEN_STORAGE_KEY),
-  getUsername: () => localStorage.getItem(`${TOKEN_STORAGE_KEY}_username`),
-  isLoggedIn: () => !!localStorage.getItem(TOKEN_STORAGE_KEY),
+  getToken: () => sessionStorage.getItem(TOKEN_STORAGE_KEY),
+  getUsername: () => sessionStorage.getItem(`${TOKEN_STORAGE_KEY}_username`),
+  isLoggedIn: () => !!sessionStorage.getItem(TOKEN_STORAGE_KEY),
 
   signup: async (username, password, passwordConfirm) => {
     const res = await fetch(`${API_BASE}/auth/signup/`, {
@@ -21,8 +25,8 @@ export const auth = {
       const messages = Object.values(data).flat().join(" ");
       throw new Error(messages || "회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.");
     }
-    localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
-    localStorage.setItem(`${TOKEN_STORAGE_KEY}_username`, data.username);
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+    sessionStorage.setItem(`${TOKEN_STORAGE_KEY}_username`, data.username);
     return data;
   },
 
@@ -37,15 +41,15 @@ export const auth = {
       throw new Error(body.detail || "로그인에 실패했어요.");
     }
     const data = await res.json();
-    localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
-    localStorage.setItem(`${TOKEN_STORAGE_KEY}_username`, data.username);
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+    sessionStorage.setItem(`${TOKEN_STORAGE_KEY}_username`, data.username);
     return data;
   },
 
   logout: () => {
     readCache.clear();
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-    localStorage.removeItem(`${TOKEN_STORAGE_KEY}_username`);
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(`${TOKEN_STORAGE_KEY}_username`);
   },
 
   deleteAccount: async (password) => {

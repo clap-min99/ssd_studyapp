@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { marked } from "marked";
+import { renderMarkdown } from "../components/markdown.js";
 import { api } from "../api/client";
 import TermDetail from "../components/TermDetail";
 
@@ -61,7 +61,7 @@ export default function ChapterDetail() {
 
   const lessonHtml = useMemo(() => {
     if (!chapter?.lesson_body) return "";
-    return marked.parse(chapter.lesson_body);
+    return renderMarkdown(chapter.lesson_body);
   }, [chapter?.lesson_body]);
 
   if (error) return <p className="status-message error">{error}</p>;

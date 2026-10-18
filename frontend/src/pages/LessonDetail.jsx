@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { marked } from "marked";
+import { renderMarkdown } from "../components/markdown.js";
 import { api } from "../api/client";
 
 export default function LessonDetail() {
@@ -27,7 +27,7 @@ export default function LessonDetail() {
 
   const bodyHtml = useMemo(() => {
     if (!lesson?.body) return "";
-    return marked.parse(lesson.body);
+    return renderMarkdown(lesson.body);
   }, [lesson?.body]);
 
   if (error) return <p className="status-message error">{error}</p>;
