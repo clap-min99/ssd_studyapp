@@ -6,6 +6,23 @@ let csrfToken = null;
 let version = 0;
 let restoring = null;
 const listeners = new Set();
+const SESSION_RESPONSE_ERROR = "로그인 서비스를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
+
+async function readSessionResponse(res) {
+  // A misrouted API request can return the SPA's index.html with status 200.
+  // Do not feed it to Safari's JSON parser or treat an empty object as login.
+  if (!res.headers.get("content-type")?.includes("application/json")) {
+    throw new Error(SESSION_RESPONSE_ERROR);
+  }
+  let data;
+  try { data = await res.json(); }
+  catch { throw new Error(SESSION_RESPONSE_ERROR); }
+  if (!data || !(data.username === null || (typeof data.username === "string" && data.username.length > 0))
+      || typeof data.csrfToken !== "string" || !data.csrfToken) {
+    throw new Error(SESSION_RESPONSE_ERROR);
+  }
+  return data;
+}
 
 for (const name of ["localStorage", "sessionStorage"]) {
   try {
@@ -32,7 +49,7 @@ async function restoreSession() {
         credentials: "same-origin", cache: "no-store",
       });
       if (!res.ok) throw new Error("로그인 상태를 확인하지 못했어요. 다시 시도해 주세요.");
-      const data = await res.json();
+      const data = await readSessionResponse(res);
       if (version === started) setSession(data);
       return data;
     })().finally(() => { restoring = null; });
@@ -73,8 +90,12 @@ async function authenticate(path, body) {
   const res = await request(path, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   }, { authAction: true });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(Object.values(data).flat().join(" ") || "로그인에 실패했어요.");
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(Object.values(data).flat().join(" ") || "로그인에 실패했어요.");
+  }
+  const data = await readSessionResponse(res);
+  if (data.username === null) throw new Error(SESSION_RESPONSE_ERROR);
   setSession(data, true);
   return data;
 }
@@ -95,7 +116,7 @@ export const auth = {
   logout: async () => {
     const res = await request("/auth/session/logout/", { method: "POST" });
     if (!res.ok) throw new Error("로그아웃하지 못했어요. 다시 시도해 주세요.");
-    setSession(await res.json(), true);
+    setSession(await readSessionResponse(res), true);
   },
   deleteAccount: async (password) => {
     const res = await request("/auth/account/", {

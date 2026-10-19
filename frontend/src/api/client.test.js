@@ -66,6 +66,29 @@ test("cookie authentication restores safely without browser-stored credentials",
     }
   });
 
+  await t.test("HTML returned by the SPA fallback cannot be mistaken for a session", async () => {
+    const before = auth.getUsername();
+    fetch.mock.mockImplementation(async () => new Response("<!doctype html><html></html>", {
+      status: 200, headers: { "Content-Type": "text/html; charset=utf-8" },
+    }));
+    await assert.rejects(auth.restoreSession(), /로그인 서비스를 불러오지 못했어요/);
+    await assert.rejects(auth.login("reader", "password"), /로그인 서비스를 불러오지 못했어요/);
+    assert.equal(auth.getUsername(), before);
+  });
+
+  await t.test("malformed JSON and missing session fields preserve the current identity", async () => {
+    const before = auth.getUsername();
+    fetch.mock.mockImplementation(async () => new Response("not json", {
+      status: 200, headers: { "Content-Type": "application/json" },
+    }));
+    await assert.rejects(auth.restoreSession(), /로그인 서비스를 불러오지 못했어요/);
+    for (const invalid of [{}, { username: "reader" }, { csrfToken: "csrf" }, { username: null, csrfToken: "csrf" }]) {
+      respond(invalid);
+      await assert.rejects(auth.login("reader", "password"), /로그인 서비스를 불러오지 못했어요/);
+      assert.equal(auth.getUsername(), before);
+    }
+  });
+
   await t.test("every write API uses the common cookie and CSRF request path", async () => {
     respond({});
     const writes = [

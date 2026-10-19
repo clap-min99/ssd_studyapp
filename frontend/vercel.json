@@ -14,11 +14,11 @@
   ],
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://ssd-studyapp-api-80165171345.asia-south1.run.app/api/:path*"
+      "source": "/api/:path(.*)",
+      "destination": "https://ssd-studyapp-api-80165171345.asia-south1.run.app/api/:path"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }
   ]

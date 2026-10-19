@@ -21,13 +21,15 @@ OpenAI API 키와 모델 전환 설정: [OpenAI 설정 문서](openai.md).
 
 1. Django 기본 세션 테이블(`django_session`)이 대상 DB에 있는지 `python manage.py showmigrations sessions`로 확인하고 미적용이면 `python manage.py migrate`를 실행한다. 새 앱 마이그레이션이나 `seed_foundations`는 필요하지 않다.
 2. 백엔드를 먼저 배포한다. 기존 토큰 API는 기존 클라이언트 호환을 위해 유지하며, 새 브라우저 엔드포인트 `/api/auth/session/` 및 하위 login/signup/logout은 토큰을 반환하지 않는다.
-3. 프런트엔드를 배포한다. Vercel rewrite가 SPA catch-all보다 먼저 `/api/:path*`를 Cloud Run으로 전달해야 한다. 직접 Cloud Run 도메인으로 fetch하지 않는다.
+3. 프런트엔드를 배포한다. Vercel rewrite가 SPA catch-all보다 먼저 `/api/:path(.*)`를 Cloud Run으로 전달해야 한다. 이 패턴은 Django 경로 끝의 `/`까지 보존한다. SPA catch-all은 `/api`와 `/api/` 하위 경로를 제외한다. 직접 Cloud Run 도메인으로 fetch하지 않는다.
 4. 운영에서 `DJANGO_DEBUG=False`, `DJANGO_ALLOWED_HOSTS`의 API 호스트, `CORS_EXTRA_ORIGINS`의 정확한 프런트엔드 origin을 확인한다. 해당 origin은 CSRF 신뢰 목록에도 사용한다. Preview나 사용자 지정 도메인도 사용할 경우 정확한 origin만 추가한다.
 5. 최초 배포 후 한 번 다시 로그인한다. 실제 HTTPS 응답에서 위 쿠키 속성과 `Cache-Control`을 확인하고 탭 닫기→새 탭 재접속, 로그아웃→새로고침, 복습·북마크·메모 저장을 확인한다. 인증 관련 응답 본문과 쿠키는 로그에 남기지 않는다.
 
 로컬 자동 검증: `DATABASE_URL=sqlite:///:memory:` 환경에서 `python manage.py test digest`, 프런트엔드 `npm test`, `npm run build`, `npm run lint`. 실제 Vercel→Cloud Run 경로와 모바일 브라우저 쿠키 전달은 배포 후 확인해야 한다. 서버 세션 정리는 운영 주기에 맞춰 `python manage.py clearsessions`로 수행할 수 있다.
 
 구현 기준: [Django 세션 설정](https://docs.djangoproject.com/en/4.2/ref/settings/#sessions), [DRF 세션 인증과 CSRF](https://www.django-rest-framework.org/api-guide/authentication/#sessionauthentication), [Vercel 외부 rewrite](https://vercel.com/docs/routing/rewrites).
+
+로그인 화면에서 `The string did not match the expected pattern` 같은 파싱 오류가 나면 `/api/auth/session/`의 응답 형식부터 확인한다. 2026-10-19에는 백엔드 직접 요청은 JSON이었으나 Vercel 요청은 홈페이지 HTML 200이었다. `@vercel/routing-utils`로 변환한 기존 `/api/:path*`는 끝 슬래시가 있는 경로를 매칭하지 않아 SPA로 빠졌다. 위 패턴으로 수정하고 실제 Vercel 변환기를 사용하는 회귀 테스트를 추가했다. 세션 응답은 Content-Type과 필수 필드를 검증하여 HTML·잘못된 JSON을 로그인 성공으로 취급하지 않는다. 프런트 재배포 후 반드시 같은 출처의 `/api/auth/session/`에서 JSON과 HttpOnly 쿠키가 돌아오는지 확인한다.
 
 ## 배포 (Google Cloud Run)
 

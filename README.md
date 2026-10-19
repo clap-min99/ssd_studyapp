@@ -197,7 +197,7 @@ npm run dev
 ```
 
 - **기본 API 경로**: `/api`. Vite가 로컬 백엔드 `http://127.0.0.1:8000`으로 전달합니다.
-- **다른 백엔드 연결**: 로컬은 `frontend/vite.config.js`의 프록시 대상, 운영은 `frontend/vercel.json`의 `/api/:path*` rewrite 대상을 변경합니다. `VITE_API_BASE`는 사용하지 않습니다.
+- **다른 백엔드 연결**: 로컬은 `frontend/vite.config.js`의 프록시 대상, 운영은 `frontend/vercel.json`의 `/api/:path(.*)` rewrite 대상을 변경합니다. `VITE_API_BASE`는 사용하지 않습니다.
 - **로그인 유지**: HttpOnly 쿠키 기반 서버 세션으로 최대 30일 유지합니다. 백엔드 → 프런트엔드 순서로 배포하고, 최초 전환 후에는 한 번 다시 로그인합니다. 세부 설정은 [운영 문서](docs/operations.md#로그인-유지-변경-배포)를 참고하세요.
 
 ## AI 모델 설정
