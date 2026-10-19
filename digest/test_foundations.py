@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 
 from digest.models import Lesson, Tag
-from digest.management.commands.seed_foundations import LESSONS, COMBINATIONAL_LESSONS
+from digest.management.commands.seed_foundations import LESSONS, COMBINATIONAL_LESSONS, SEQUENTIAL_LESSONS
 
 
 @override_settings(CACHES={"default": {
@@ -77,13 +77,60 @@ class FoundationsTests(TestCase):
             data = detail.json()
             self.assertEqual(data["prev_lesson_id"], lesson_ids[index - 1] if index else None)
             self.assertEqual(data["next_lesson_id"], lesson_ids[index + 1] if index + 1 < len(lesson_ids) else None)
-            self.assertIsNone(data["next_chapter_slug"])
+            self.assertEqual(data["next_chapter_slug"], "sequential-logic")
             self.assert_lesson_content(data["body"], 2)
         first_detail = self.client.get("/api/tags/binary-representation/").json()
         self.assertEqual(first_detail["next_slug"], second.slug)
         final_lesson = self.client.get(f"/api/lessons/{first.lessons.last().id}/").json()
         self.assertEqual(final_lesson["next_chapter_slug"], second.slug)
         self.assertEqual(self.client.get("/api/tags/combinational-logic/").json()["prerequisite_slug"], first.slug)
+
+    def test_third_chapter_is_repeatable_and_linked_from_second(self):
+        call_command("seed_foundations", stdout=StringIO())
+        second = Tag.objects.get(slug="combinational-logic")
+        third = Tag.objects.get(slug="sequential-logic")
+        third.full_clean()
+        self.assertEqual(third.prerequisite, second)
+        self.assertEqual(third.order, 3)
+        lesson_ids = list(third.lessons.values_list("id", flat=True))
+        call_command("seed_foundations", stdout=StringIO())
+        self.assertEqual(list(third.lessons.values_list("id", flat=True)), lesson_ids)
+        response = self.client.get("/api/tags/sequential-logic/lessons/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([lesson["order"] for lesson in response.json()], list(range(1, 18)))
+        self.assertEqual(len(lesson_ids), len(SEQUENTIAL_LESSONS))
+        for index, lesson_id in enumerate(lesson_ids):
+            data = self.client.get(f"/api/lessons/{lesson_id}/").json()
+            self.assertEqual(data["prev_lesson_id"], lesson_ids[index - 1] if index else None)
+            self.assertEqual(data["next_lesson_id"], lesson_ids[index + 1] if index + 1 < len(lesson_ids) else None)
+            self.assertIsNone(data["next_chapter_slug"])
+            self.assert_lesson_content(data["body"], 3)
+        self.assertEqual(self.client.get("/api/tags/combinational-logic/").json()["next_slug"], third.slug)
+        self.assertEqual(self.client.get("/api/tags/sequential-logic/").json()["prerequisite_slug"], second.slug)
+        final_lesson = self.client.get(f"/api/lessons/{second.lessons.last().id}/").json()
+        self.assertEqual(final_lesson["next_chapter_slug"], third.slug)
+
+    def test_failure_in_third_chapter_rolls_back_existing_content(self):
+        from pathlib import Path
+
+        call_command("seed_foundations", stdout=StringIO())
+        lesson = Lesson.objects.get(chapter__slug="combinational-logic", order=1)
+        lesson.body = "보존할 기존 편집"
+        lesson.save(update_fields=["body"])
+        lesson_ids = set(Lesson.objects.values_list("id", flat=True))
+        read_text = Path.read_text
+
+        def read_content(path, *args, **kwargs):
+            if "chapter03" in path.parts:
+                raise FileNotFoundError("3장 콘텐츠 누락")
+            return read_text(path, *args, **kwargs)
+
+        with patch("digest.management.commands.seed_foundations.Path.read_text", autospec=True, side_effect=read_content):
+            with self.assertRaises(FileNotFoundError):
+                call_command("seed_foundations", stdout=StringIO())
+        lesson.refresh_from_db()
+        self.assertEqual(lesson.body, "보존할 기존 편집")
+        self.assertEqual(set(Lesson.objects.values_list("id", flat=True)), lesson_ids)
 
     def test_upgrade_preserves_three_prototype_lesson_ids(self):
         chapter = Tag.objects.create(slug="binary-representation", name="비트와 수의 표현", category="foundations", order=1)

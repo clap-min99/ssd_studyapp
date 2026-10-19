@@ -39,6 +39,26 @@ COMBINATIONAL_LESSONS = [
     (14, "14-review.md", "2장 종합: 명세에서 구현·검증까지"),
 ]
 
+SEQUENTIAL_LESSONS = [
+    (1, "01-state.md", "기억과 상태: 피드백으로 1비트 저장하기"),
+    (2, "02-latch.md", "D 래치: 언제 데이터를 통과시킬까"),
+    (3, "03-flipflop.md", "D 플립플롭과 레지스터: 에지에서 값 저장하기"),
+    (4, "04-controls.md", "Enable과 Reset: 유지·갱신·초기화 구별하기"),
+    (5, "05-transistors.md", "전송 게이트로 저장 소자 만들기"),
+    (6, "06-synchronous.md", "동기식 설계: 피드백 경로에 레지스터 두기"),
+    (7, "07-fsm.md", "FSM 설계: 명세에서 상태표와 회로까지"),
+    (8, "08-encoding.md", "상태 인코딩: 이진수와 one-hot 비교하기"),
+    (9, "09-moore-mealy.md", "Moore와 Mealy: 출력이 반응하는 시점"),
+    (10, "10-factoring.md", "FSM 분해: 작은 상태 머신의 협력"),
+    (11, "11-reverse.md", "회로에서 FSM 읽기: 식·표·도달 가능한 상태"),
+    (12, "12-timing.md", "Setup과 Hold: 느린 경로와 빠른 경로 검사하기"),
+    (13, "13-skew.md", "[선택 심화] 클록 스큐: 같은 클록의 다른 도착 시각"),
+    (14, "14-synchronizer.md", "준안정성과 동기화기: 비동기 입력 받아들이기"),
+    (15, "15-resolution.md", "[선택 심화] 준안정성 해소 시간의 지수 법칙"),
+    (16, "16-parallelism.md", "병렬성과 파이프라인: 지연 시간과 처리량"),
+    (17, "17-review.md", "3장 종합: 상태·기능·시간을 함께 검증하기"),
+]
+
 CHAPTERS = [
     ("binary-representation", "디지털 설계의 출발점",
      "H&H RISC-V판 1장: 추상화 → 수의 표현 → 논리 게이트 → 전압·CMOS·전력. 그림과 예제, 확인 문제로 기초를 쌓습니다.",
@@ -46,11 +66,14 @@ CHAPTERS = [
     ("combinational-logic", "조합논리 설계",
      "H&H RISC-V판 2장: 진리표와 논리식 → 불 대수·카르노 맵 → MUX·디코더 → 지연과 글리치. 원하는 동작을 회로로 구현합니다.",
      "chapter02", COMBINATIONAL_LESSONS),
+    ("sequential-logic", "순차논리 설계",
+     "H&H RISC-V판 3장: 래치·플립플롭 → 동기식 회로·FSM → Setup/Hold·동기화 → 파이프라인. 기억하는 회로의 기능과 시간을 함께 설계합니다.",
+     "chapter03", SEQUENTIAL_LESSONS),
 ]
 
 
 class Command(BaseCommand):
-    help = "Harris & Harris RISC-V판 1–2장에 대응하는 기초 챕터와 레슨을 생성·갱신한다."
+    help = "Harris & Harris RISC-V판 1–3장에 대응하는 기초 챕터와 레슨을 생성·갱신한다."
 
     @transaction.atomic
     def handle(self, *args, **kwargs):

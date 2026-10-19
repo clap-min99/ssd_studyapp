@@ -14,7 +14,7 @@ export default function Chapters() {
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [track, setTrack] = useState("ssd");
+  const [track, setTrack] = useState("foundations");
   const navigate = useNavigate();
 
   useEffect(() => {

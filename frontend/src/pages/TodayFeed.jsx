@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, CATEGORY_BADGE_CLASS, CATEGORY_LABEL } from "../api/client";
 import DigestView from "./DigestView";
+import ItemDetail from "../components/ItemDetail";
 import { isSafeWebUrl } from "../components/safeUrl.js";
 
 const VIEWS = [
@@ -19,24 +20,44 @@ export default function TodayFeed() {
   const [tagsError, setTagsError] = useState(null);
   const [selectedTag, setSelectedTag] = useState(null);
   const [tagArticles, setTagArticles] = useState([]);
+  const [articlesLoading, setArticlesLoading] = useState(false);
+  const [articlesError, setArticlesError] = useState(null);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+
+  const filteredTags = tags.filter((t) => t.category === view);
+  const activeTag = filteredTags.find((t) => t.slug === selectedTag) ?? filteredTags[0];
+  const activeSlug = activeTag?.slug;
 
   useEffect(() => {
     api.getLatestDigest().then(setDigest).catch((e) => setError(e.message)).finally(() => setLoading(false));
     api.getTags().then(setTags).catch((e) => setTagsError(e.message));
   }, []);
 
+  useEffect(() => {
+    if (!activeSlug) return;
+    let active = true;
+    setTagArticles([]);
+    setArticlesLoading(true);
+    setArticlesError(null);
+    api.getTagArticles(activeSlug)
+      .then((data) => active && setTagArticles(data))
+      .catch((e) => active && setArticlesError(e.message))
+      .finally(() => active && setArticlesLoading(false));
+    return () => { active = false; };
+  }, [activeSlug]);
+
   const changeView = (value) => {
+    if (value === view) return;
     setView(value);
     setSelectedTag(null);
     setTagArticles([]);
+    setSelectedArticle(null);
   };
 
-  const selectTag = async (tag) => {
-    setSelectedTag(tag);
-    setTagArticles(await api.getTagArticles(tag.slug));
+  const selectTag = (tag) => {
+    setSelectedTag(tag.slug);
+    setSelectedArticle(null);
   };
-
-  const filteredTags = tags.filter((t) => t.category === view);
 
   return (
     <div>
@@ -68,7 +89,7 @@ export default function TodayFeed() {
             {filteredTags.map((t) => (
               <button
                 key={t.slug}
-                className={`pill pill-button ${selectedTag?.slug === t.slug ? "pill-accent" : CATEGORY_BADGE_CLASS[t.category] ?? "pill-neutral"}`}
+                className={`pill pill-button ${activeSlug === t.slug ? "pill-accent" : CATEGORY_BADGE_CLASS[t.category] ?? "pill-neutral"}`}
                 onClick={() => selectTag(t)}
               >
                 {t.name}
@@ -76,11 +97,13 @@ export default function TodayFeed() {
             ))}
           </div>
 
-          {selectedTag && (
+          {activeTag && (
             <>
-              <p className="status-message">{selectedTag.description}</p>
+              <p className="status-message">{activeTag.description}</p>
+              {articlesLoading && <p className="status-message">불러오는 중...</p>}
+              {articlesError && <p className="status-message error">{articlesError}</p>}
               {tagArticles.map((a) => (
-                <article key={a.id} className="card">
+                <article key={a.id} className="card clickable" onClick={() => setSelectedArticle(a)}>
                   <span className={`badge ${CATEGORY_BADGE_CLASS[a.category] ?? ""}`}>
                     {CATEGORY_LABEL[a.category] ?? a.category}
                   </span>
@@ -90,7 +113,7 @@ export default function TodayFeed() {
                   {a.links.length > 0 && (
                     <div className="links">
                       {a.links.filter(isSafeWebUrl).map((link) => (
-                        <a key={link} href={link} target="_blank" rel="noreferrer">
+                        <a key={link} href={link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
                           원문 링크
                         </a>
                       ))}
@@ -101,6 +124,14 @@ export default function TodayFeed() {
             </>
           )}
         </div>
+      )}
+      {selectedArticle && (
+        <ItemDetail
+          key={selectedArticle.id}
+          kind="article"
+          item={selectedArticle}
+          onClose={() => setSelectedArticle(null)}
+        />
       )}
     </div>
   );

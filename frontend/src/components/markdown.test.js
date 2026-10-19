@@ -42,13 +42,16 @@ test("Markdown sanitization removes executable HTML and preserves lesson content
 
   await t.test("preserves existing foundation SVG diagrams and accessible labels", async () => {
     const folder = new URL("../../../digest/content/foundations/", import.meta.url);
-    const files = (await readdir(folder)).filter((name) => name.endsWith(".md"));
+    const files = (await readdir(folder, { recursive: true })).filter((name) => name.endsWith(".md"));
     let diagrams = 0;
     for (const name of files) {
       const source = await readFile(new URL(name, folder), "utf8");
       const expected = (source.match(/<svg\b/g) || []).length;
       const result = parse(source);
       assert.equal(result.querySelectorAll("svg").length, expected, name);
+      assert.equal(result.querySelectorAll("details").length, (source.match(/<details>/g) || []).length, name);
+      assert.equal(result.querySelector("del"), null, name);
+      assert.doesNotMatch(result.textContent, /\*\*/, name);
       if (expected) {
         diagrams += expected;
         const svg = result.querySelector("svg");
