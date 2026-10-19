@@ -66,6 +66,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'digest.authentication.PrivateAPICacheMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -88,10 +89,22 @@ CORS_ALLOWED_ORIGINS = [
     if o.strip()
 ]
 
-# 읽기 전용 공개 API이므로 인증까지는 필요 없지만, 과도한 요청(스크래핑/DoS성)은 제한한다
+# Browser traffic uses the frontend's same-origin /api proxy.
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS + [f"https://{h}" for h in ALLOWED_HOSTS if h != "*"]
+SESSION_COOKIE_NAME = "ssd_session" if DEBUG else "__Host-ssd_session"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = False
+CSRF_USE_SESSIONS = True
+CSRF_FAILURE_VIEW = "digest.browser_auth.csrf_failure"
+
+# Public reads and authenticated per-user operations share these defaults.
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
+        'digest.authentication.BrowserSessionAuthentication',
     ],
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
@@ -100,6 +113,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '60/min',
         'user': '300/min',
+        'browser_auth': '10/min',
     },
 }
 
@@ -203,5 +217,3 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-    # ALLOWED_HOSTS와 동일한 출처를 CSRF 신뢰 목록에도 등록 (admin 로그인 등에 필요)
-    CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS]

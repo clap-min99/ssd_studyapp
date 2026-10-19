@@ -36,6 +36,7 @@ export default function Login({ onLoggedIn }) {
     <div className="login-screen">
       <h1><Wordmark large /></h1>
       <p className="feed-subject">{signup ? "계정을 만들고 학습을 시작하세요" : "개인 학습 기록 — 로그인이 필요해요"}</p>
+      <p className="feed-subject">로그인은 최대 30일 유지됩니다. 공용 기기에서는 이용 후 로그아웃해 주세요.</p>
 
       <form className="login-form" onSubmit={handleSubmit}>
         <input

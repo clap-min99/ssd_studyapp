@@ -1,92 +1,20 @@
 import { createReadCache } from "./readCache.js";
 
-const API_BASE = import.meta.env?.VITE_API_BASE || "http://127.0.0.1:8000/api";
-const TOKEN_STORAGE_KEY = "ssd_digest_token";
+import { auth, request } from "./sessionAuth.js";
+export { auth };
+
 const readCache = createReadCache();
 const CONTENT_TTL = 60_000;
-
-// 이전 버전에서 영구 저장한 인증 정보는 재사용하지 않는다.
-localStorage.removeItem(TOKEN_STORAGE_KEY);
-localStorage.removeItem(`${TOKEN_STORAGE_KEY}_username`);
-
-export const auth = {
-  getToken: () => sessionStorage.getItem(TOKEN_STORAGE_KEY),
-  getUsername: () => sessionStorage.getItem(`${TOKEN_STORAGE_KEY}_username`),
-  isLoggedIn: () => !!sessionStorage.getItem(TOKEN_STORAGE_KEY),
-
-  signup: async (username, password, passwordConfirm) => {
-    const res = await fetch(`${API_BASE}/auth/signup/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, password_confirm: passwordConfirm }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const messages = Object.values(data).flat().join(" ");
-      throw new Error(messages || "회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.");
-    }
-    sessionStorage.setItem(TOKEN_STORAGE_KEY, data.token);
-    sessionStorage.setItem(`${TOKEN_STORAGE_KEY}_username`, data.username);
-    return data;
-  },
-
-  login: async (username, password) => {
-    const res = await fetch(`${API_BASE}/auth/login/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.detail || "로그인에 실패했어요.");
-    }
-    const data = await res.json();
-    sessionStorage.setItem(TOKEN_STORAGE_KEY, data.token);
-    sessionStorage.setItem(`${TOKEN_STORAGE_KEY}_username`, data.username);
-    return data;
-  },
-
-  logout: () => {
-    readCache.clear();
-    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
-    sessionStorage.removeItem(`${TOKEN_STORAGE_KEY}_username`);
-  },
-
-  deleteAccount: async (password) => {
-    const res = await fetch(`${API_BASE}/auth/account/`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ password }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(Object.values(data).flat().join(" ") || "계정 삭제에 실패했어요. 다시 시도해 주세요.");
-    }
-    auth.logout();
-  },
-};
-
-function authHeaders() {
-  const token = auth.getToken();
-  return token ? { Authorization: `Token ${token}` } : {};
-}
+auth.subscribe(() => readCache.clear());
 
 function get(path, ttl = 0) {
-  const headers = authHeaders();
-  const key = JSON.stringify([headers.Authorization || "", path]);
-  return readCache.read(key, () => fetchJson(path, headers), ttl);
+  const key = JSON.stringify([auth.getVersion(), path]);
+  return readCache.read(key, () => fetchJson(path), ttl);
 }
 
-async function fetchJson(path, headers) {
-  const res = await fetch(`${API_BASE}${path}`, { headers });
-  if (res.status === 401 && auth.isLoggedIn()) {
-    // 저장된 토큰이 서버에 없음(DB 변경·토큰 삭제 등) -> 로그아웃 후 로그인 화면으로
-    auth.logout();
-    window.location.reload();
-  }
-  if (!res.ok) {
-    throw new Error(`API 요청 실패: ${path} (${res.status})`);
-  }
+async function fetchJson(path) {
+  const res = await request(path);
+  if (!res.ok) throw new Error(`API 요청 실패: ${path} (${res.status})`);
   return res.json();
 }
 
@@ -123,9 +51,9 @@ export const CATEGORY_BADGE_CLASS = {
 export const reviewApi = {
   getSession: () => get("/review/session/"),
   startSession: async (options) => {
-    const res = await fetch(`${API_BASE}/review/session/`, {
+    const res = await request(`/review/session/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(options),
     });
     const data = await res.json();
@@ -135,9 +63,9 @@ export const reviewApi = {
   getDue: () => get("/review/due/"),
   getStreak: () => get("/review/streak/"),
   submitAnswer: async (termId, familiarity, sessionId) => {
-    const res = await fetch(`${API_BASE}/review/${termId}/answer/`, {
+    const res = await request(`/review/${termId}/answer/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ familiarity, session_id: sessionId }),
     });
     if (!res.ok) {
@@ -147,9 +75,9 @@ export const reviewApi = {
     return res.json();
   },
   checkAnswer: async (termId, answer) => {
-    const res = await fetch(`${API_BASE}/terms/${termId}/check_answer/`, {
+    const res = await request(`/terms/${termId}/check_answer/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ answer }),
     });
     if (!res.ok) {
@@ -164,9 +92,8 @@ export const reviewApi = {
 export const bookmarkApi = {
   getIds: () => get("/concept-bookmarks/"),
   set: async (id, saved) => {
-    const res = await fetch(`${API_BASE}/concept-bookmarks/${id}/`, {
+    const res = await request(`/concept-bookmarks/${id}/`, {
       method: saved ? "PUT" : "DELETE",
-      headers: authHeaders(),
     });
     if (!res.ok) throw new Error("북마크 변경에 실패했어요. 다시 시도해 주세요.");
   },
@@ -179,9 +106,8 @@ export const termApi = {
 // 기사/학습 카드 심화 해설 — kind: "article" | "learning-item"
 export const deepDiveApi = {
   generate: async (kind, id) => {
-    const res = await fetch(`${API_BASE}/deep-dive/${kind}/${id}/`, {
+    const res = await request(`/deep-dive/${kind}/${id}/`, {
       method: "POST",
-      headers: authHeaders(),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -196,9 +122,9 @@ export const deepDiveApi = {
 export const noteApi = {
   getInsight: (digestId) => get(`/digests/${digestId}/insight/`),
   saveInsight: async (digestId, text) => {
-    const res = await fetch(`${API_BASE}/digests/${digestId}/insight/`, {
+    const res = await request(`/digests/${digestId}/insight/`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
     if (!res.ok) throw new Error("인사이트 저장에 실패했어요.");
@@ -206,27 +132,26 @@ export const noteApi = {
   },
   getQuestions: (digestId) => get(`/digests/${digestId}/questions/`),
   addQuestion: async (digestId, text) => {
-    const res = await fetch(`${API_BASE}/digests/${digestId}/questions/`, {
+    const res = await request(`/digests/${digestId}/questions/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
     if (!res.ok) throw new Error("질문 추가에 실패했어요.");
     return res.json();
   },
   toggleQuestion: async (questionId, resolved) => {
-    const res = await fetch(`${API_BASE}/questions/${questionId}/`, {
+    const res = await request(`/questions/${questionId}/`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resolved }),
     });
     if (!res.ok) throw new Error("질문 상태 변경에 실패했어요.");
     return res.json();
   },
   deleteQuestion: async (questionId) => {
-    const res = await fetch(`${API_BASE}/questions/${questionId}/`, {
+    const res = await request(`/questions/${questionId}/`, {
       method: "DELETE",
-      headers: authHeaders(),
     });
     if (!res.ok) throw new Error("질문 삭제에 실패했어요.");
   },

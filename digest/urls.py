@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .review_sessions import ReviewSessionView
+from .browser_auth import BrowserLoginView, BrowserLogoutView, BrowserSessionView, BrowserSignupView
 
 from .views import (
     ContentDetailView,
@@ -32,6 +33,10 @@ router.register("terms", TermViewSet, basename="term")
 router.register("questions", QuestionViewSet, basename="question")
 
 urlpatterns = [
+    path("auth/session/", BrowserSessionView.as_view(), name="browser-session"),
+    path("auth/session/login/", BrowserLoginView.as_view(), name="browser-login"),
+    path("auth/session/signup/", BrowserSignupView.as_view(), name="browser-signup"),
+    path("auth/session/logout/", BrowserLogoutView.as_view(), name="browser-logout"),
     path("content/<str:kind>/<int:pk>/", ContentDetailView.as_view(), name="content-detail"),
     path("concept-bookmarks/", ConceptBookmarkListView.as_view(), name="concept-bookmark-list"),
     path("concept-bookmarks/<int:pk>/", ConceptBookmarkView.as_view(), name="concept-bookmark"),

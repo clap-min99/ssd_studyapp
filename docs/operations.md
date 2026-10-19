@@ -10,9 +10,24 @@ OpenAI API 키와 모델 전환 설정: [OpenAI 설정 문서](openai.md).
 
 - 레슨·챕터·AI 해설은 `frontend/src/components/markdown.js`에서 Markdown 변환 후 DOMPurify로 정제한다. 새 HTML 렌더링 경로도 이 함수를 사용한다.
 - Vercel의 `frontend/vercel.json`은 CSP로 인라인 스크립트·eval·외부 프레임 삽입을 차단한다. React 스타일을 위해 인라인 CSS는 허용한다.
-- API 도메인이 바뀌면 `VITE_API_BASE`와 CSP의 `connect-src`를 함께 갱신한다. CSP는 Vercel 배포 후 실제 응답 헤더와 로그인·학습 화면에서 확인한다.
-- 인증 정보는 탭의 `sessionStorage`에 저장하며 JavaScript에서 읽을 수 있다. HttpOnly 쿠키 기반 인증으로 전환한 상태는 아니다.
+- 브라우저 API 요청은 같은 출처의 `/api`를 사용한다. API 도메인이 바뀌면 `frontend/vercel.json`의 외부 rewrite 대상을 갱신한다. 로컬 프록시는 `frontend/vite.config.js`에서 설정한다. `VITE_API_BASE`는 더 이상 사용하지 않는다.
+- 로그인은 서버 DB 세션으로 최대 30일 유지한다. 운영 쿠키는 `__Host-ssd_session`, `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, Domain 미지정이다. 로컬 HTTP 개발에서는 `ssd_session`과 Secure 비활성 설정을 사용한다. 인증 토큰을 localStorage/sessionStorage에 저장하지 않으며, 이전 토큰은 브라우저에서 삭제한다.
+- CSRF 비밀값은 세션에 보관한다. `/api/auth/session/`이 반환하는 마스킹된 CSRF 토큰만 메모리에 두고 모든 변경 요청의 `X-CSRFToken`에 넣는다. 로그인·회원가입·로그아웃도 익명 요청부터 CSRF를 검사한다. 로그인 성공 시 Django가 세션 키와 CSRF 비밀값을 교체한다.
+- 로그아웃·탈퇴는 서버 세션을 폐기한다. 로그아웃 통신이 실패하면 완료로 표시하지 않는다. 세션 조회의 통신 오류에는 재시도를 제공하며, 네트워크 오류·5xx·일반 권한 오류로 세션을 삭제하지 않는다. 로그인 전 요청에서 늦게 돌아온 401도 새 로그인을 해제하지 않는다.
+- 다른 탭의 로그인으로 CSRF가 바뀌면 검증에서 거부된 요청에 한해 토큰을 갱신하고 한 번만 재시도한다. 재조회에서 계정이 달라지면 변경 요청을 재전송하지 않는다. API 응답에는 `private, no-store`를 적용하고 계정 전환 시 메모리 캐시도 비운다.
 - 이 변경은 Supabase 권한이나 백업을 변경하지 않는다. 별도로 확인하고 조치해야 한다.
+
+### 로그인 유지 변경 배포
+
+1. Django 기본 세션 테이블(`django_session`)이 대상 DB에 있는지 `python manage.py showmigrations sessions`로 확인하고 미적용이면 `python manage.py migrate`를 실행한다. 새 앱 마이그레이션이나 `seed_foundations`는 필요하지 않다.
+2. 백엔드를 먼저 배포한다. 기존 토큰 API는 기존 클라이언트 호환을 위해 유지하며, 새 브라우저 엔드포인트 `/api/auth/session/` 및 하위 login/signup/logout은 토큰을 반환하지 않는다.
+3. 프런트엔드를 배포한다. Vercel rewrite가 SPA catch-all보다 먼저 `/api/:path*`를 Cloud Run으로 전달해야 한다. 직접 Cloud Run 도메인으로 fetch하지 않는다.
+4. 운영에서 `DJANGO_DEBUG=False`, `DJANGO_ALLOWED_HOSTS`의 API 호스트, `CORS_EXTRA_ORIGINS`의 정확한 프런트엔드 origin을 확인한다. 해당 origin은 CSRF 신뢰 목록에도 사용한다. Preview나 사용자 지정 도메인도 사용할 경우 정확한 origin만 추가한다.
+5. 최초 배포 후 한 번 다시 로그인한다. 실제 HTTPS 응답에서 위 쿠키 속성과 `Cache-Control`을 확인하고 탭 닫기→새 탭 재접속, 로그아웃→새로고침, 복습·북마크·메모 저장을 확인한다. 인증 관련 응답 본문과 쿠키는 로그에 남기지 않는다.
+
+로컬 자동 검증: `DATABASE_URL=sqlite:///:memory:` 환경에서 `python manage.py test digest`, 프런트엔드 `npm test`, `npm run build`, `npm run lint`. 실제 Vercel→Cloud Run 경로와 모바일 브라우저 쿠키 전달은 배포 후 확인해야 한다. 서버 세션 정리는 운영 주기에 맞춰 `python manage.py clearsessions`로 수행할 수 있다.
+
+구현 기준: [Django 세션 설정](https://docs.djangoproject.com/en/4.2/ref/settings/#sessions), [DRF 세션 인증과 CSRF](https://www.django-rest-framework.org/api-guide/authentication/#sessionauthentication), [Vercel 외부 rewrite](https://vercel.com/docs/routing/rewrites).
 
 ## 배포 (Google Cloud Run)
 

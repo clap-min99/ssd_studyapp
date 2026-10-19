@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import authenticate, get_user_model, logout
 from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, Prefetch
 from django.shortcuts import get_object_or_404
@@ -114,6 +114,7 @@ class AccountView(APIView):
             return Response({"detail": "비밀번호가 올바르지 않습니다."}, status=400)
         with transaction.atomic():
             request.user.delete()
+        logout(request)
         return Response(status=204)
 
 

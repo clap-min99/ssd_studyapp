@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 import TodayFeed from "./pages/TodayFeed";
 import Timeline from "./pages/Timeline";
@@ -19,7 +19,37 @@ import "./App.css";
 export default function App() {
   const location = useLocation();
   const [loggedIn, setLoggedIn] = useState(auth.isLoggedIn());
+  const [sessionVersion, setSessionVersion] = useState(auth.getVersion());
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [authError, setAuthError] = useState(null);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [streakVersion, setStreakVersion] = useState(0);
+  useEffect(() => auth.subscribe(() => {
+    setLoggedIn(auth.isLoggedIn());
+    setSessionVersion(auth.getVersion());
+  }), []);
+  useEffect(() => {
+    let active = true;
+    auth.restoreSession().then(() => {
+      if (active) { setLoggedIn(auth.isLoggedIn()); setCheckingSession(false); }
+    }).catch((err) => { if (active) setAuthError(err.message); });
+    return () => { active = false; };
+  }, []);
+
+  async function retrySession() {
+    setAuthError(null);
+    try {
+      await auth.restoreSession();
+      setLoggedIn(auth.isLoggedIn());
+      setCheckingSession(false);
+    } catch (err) { setAuthError(err.message); }
+  }
+
+  if (checkingSession) {
+    return <div className="app"><main className="main-content">
+      {authError ? <><p role="alert">{authError}</p><button onClick={retrySession}>다시 시도</button></> : <p role="status">로그인 상태 확인 중...</p>}
+    </main></div>;
+  }
   if (!loggedIn) {
     return (
       <div className="app">
@@ -30,13 +60,18 @@ export default function App() {
     );
   }
 
-  function handleLogout() {
-    auth.logout();
-    setLoggedIn(false);
+  async function handleLogout() {
+    setLoggingOut(true);
+    setAuthError(null);
+    try {
+      await auth.logout();
+      setLoggedIn(false);
+    } catch (err) { setAuthError(err.message); }
+    finally { setLoggingOut(false); }
   }
 
   return (
-    <div className="app">
+    <div className="app" key={sessionVersion}>
       <main className="main-content">
         <header className="brand-header">
           <NavLink to="/" className="brand-home" aria-label="SSD Tech Log 홈">
@@ -46,17 +81,18 @@ export default function App() {
             <NavLink className="topbar-username" to="/account" aria-label="계정 관리">
               {auth.getUsername()}
             </NavLink>
-            <button className="logout-link" onClick={handleLogout}>
-              로그아웃
+            <button className="logout-link" onClick={handleLogout} disabled={loggingOut}>
+              {loggingOut ? "로그아웃 중..." : "로그아웃"}
             </button>
           </div>
         </header>
+        {authError && <p role="alert" className="status-message error">{authError}</p>}
         <div className="topbar">
           <StreakBadge refreshKey={streakVersion} />
         </div>
 
         <Routes>
-          <Route path="/account" element={<Account onDeleted={handleLogout} />} />
+          <Route path="/account" element={<Account onDeleted={() => setLoggedIn(false)} />} />
           <Route path="/" element={<TodayFeed />} />
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/digest/:id" element={<DigestDetail />} />
