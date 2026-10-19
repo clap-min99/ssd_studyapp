@@ -196,7 +196,7 @@ SSD·자동차 연결은 이해를 도울 때만 넣으며 산업 이야기가 �
 명령 도중 오류가 나면 해당 실행의 DB 변경은 모두 롤백합니다. 프런트 변경은 별도 배포가 필요합니다.
 기존 `seed_tags`, `seed_lessons`, `seed_lesson_pages`와 독립적으로 실행합니다.
 
-1장 본문은 `digest/content/foundations/`, 2장과 3장은 그 아래 `chapter02/`, `chapter03/`에 있습니다.
+장별 본문은 `digest/content/foundations/` 아래 `chapter01/`, `chapter02/`, `chapter03/`에 있습니다.
 `seed_foundations.py`의 `CHAPTERS`에서 챕터 메타데이터·폴더·선행 관계를 관리하고,
 `LESSONS`·`COMBINATIONAL_LESSONS`·`SEQUENTIAL_LESSONS`에서 레슨 순서를 관리합니다.
 현재 시드는 3개 챕터·43개 레슨을 생성·갱신하며 기존 1·2장 레슨 ID와 URL도 유지합니다.

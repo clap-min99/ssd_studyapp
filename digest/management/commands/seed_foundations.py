@@ -62,7 +62,7 @@ SEQUENTIAL_LESSONS = [
 CHAPTERS = [
     ("binary-representation", "디지털 설계의 출발점",
      "H&H RISC-V판 1장: 추상화 → 수의 표현 → 논리 게이트 → 전압·CMOS·전력. 그림과 예제, 확인 문제로 기초를 쌓습니다.",
-     "", LESSONS),
+     "chapter01", LESSONS),
     ("combinational-logic", "조합논리 설계",
      "H&H RISC-V판 2장: 진리표와 논리식 → 불 대수·카르노 맵 → MUX·디코더 → 지연과 글리치. 원하는 동작을 회로로 구현합니다.",
      "chapter02", COMBINATIONAL_LESSONS),
