@@ -24,7 +24,27 @@ D 래치는 CLK=1인 구간 내내 투명합니다. 회로 전체의 상태를 �
 <desc id="c3-3-d">D는 CLK가 0에서 투명한 L1을 거쳐 N으로, N은 CLK가 1에서 투명한 L2를 거쳐 Q로 갑니다. 이상적인 모델에서 두 래치가 동시에 투명하지 않습니다.</desc>
 <g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="60" y="30" width="135" height="75"/><rect x="250" y="30" width="135" height="75"/></g><path d="M20 65 H60 M195 65 H250 M385 65 H420" fill="none" stroke="var(--ink)" stroke-width="2"/><g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="12" y="55">D</text><text x="127" y="55">L1</text><text x="127" y="85">CLK=0: 투명</text><text x="222" y="55">N</text><text x="317" y="55">L2</text><text x="317" y="85">CLK=1: 투명</text><text x="425" y="55">Q</text><text x="220" y="135">상승 에지 직전의 D를 Q에 저장</text></g>
 </svg>
-<p class="diagram-caption">그림 3-3. 내부 게이트와 클록 반전 회로를 생략한 기능도입니다.</p>
+<p class="diagram-caption">그림 3-3a. 내부 게이트와 클록 반전 회로를 생략한 기능도입니다.</p>
+
+## 같은 입력을 래치와 플립플롭에 넣으면
+
+아래는 지연을 생략한 이상적 비교입니다. 초기 D=N=Q=0이고, D는 2ns에 1, 6ns에 0으로 바뀝니다. CLK는 4ns에 상승하고 8ns에 하강합니다. 입력 전환은 샘플 경계에서 충분히 떨어져 있다고 가정합니다.
+
+<svg viewBox="0 0 460 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c3-3b-t c3-3b-d">
+<title id="c3-3b-t">같은 시간축에서 비교한 래치와 플립플롭</title>
+<desc id="c3-3b-d">클록이 4부터 8ns까지 높습니다. D는 2ns에 상승하고 6ns에 하강합니다. 중간값 N은 2ns에 상승한 뒤 8ns에 하강합니다. 플립플롭 출력은 4ns에 상승해 유지하고 양의 레벨 래치 출력은 4ns에 상승하고 6ns에 하강합니다.</desc>
+<rect x="240" y="20" width="120" height="215" fill="var(--accent-soft)"/><g stroke="var(--muted)" stroke-dasharray="4 4"><path d="M180 20 V235 M240 20 V235 M300 20 V235 M360 20 V235"/></g><g stroke="var(--ink)" stroke-width="2" fill="none"><path d="M120 50 H240 V30 H360 V50 H420 M120 95 H180 V75 H300 V95 H420 M120 140 H180 V120 H360 V140 H420 M120 185 H240 V165 H420 M120 230 H240 V210 H300 V230 H420"/></g><g fill="var(--ink)" font-size="14"><text x="15" y="48">CLK</text><text x="15" y="93">D</text><text x="15" y="138">N (L1 출력)</text><text x="15" y="183">플립플롭 Q</text><text x="15" y="228">D 래치 Q</text><text x="175" y="255">2</text><text x="235" y="255">4</text><text x="295" y="255">6</text><text x="355" y="255">8</text><text x="400" y="255">ns</text></g>
+</svg>
+<p class="diagram-caption">그림 3-3b. 음영은 CLK=1인 구간입니다. 맨 아래는 동일한 D와 CLK를 별도의 양의 레벨 D 래치에 넣은 결과입니다.</p>
+
+| 시각 | L1과 중간값 N | L2와 플립플롭 Q | 비교용 D 래치 Q |
+| --- | --- | --- | --- |
+| 2ns: D=1 | L1이 열려 N=1 | L2가 닫혀 Q=0 | CLK=0이므로 0 유지 |
+| 4ns: 상승 에지 | L1이 닫혀 N=1 저장 | L2가 열려 Q=1 | 열리면서 1 통과 |
+| 6ns: D=0 | L1이 닫혀 N=1 유지 | 고정된 N을 받아 Q=1 | 열려 있으므로 Q=0 |
+| 8ns: 하강 에지 | L1이 열려 N=0 | L2가 닫혀 Q=1 유지 | 닫히면서 0 유지 |
+
+6ns가 핵심입니다. L2 자체는 열려 있어도 앞의 L1이 데이터를 막으므로 플립플롭 전체는 투명하지 않습니다. 실제 회로는 클록 반전 지연과 내부 시간 조건을 고려해야 하며, 이 표는 두 래치가 이상적으로 교대로 열리는 기능 모델입니다.
 
 ## 레지스터는 비트들의 묶음
 

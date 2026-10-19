@@ -15,11 +15,20 @@ FSM 설계는 명세→상태도→표→식→회로였습니다. 회로를 해
 <desc id="c3-11-d">플립플롭의 Q와 D를 찾아 식을 쓰고 전이표를 완성한 뒤 리셋에서 도달 가능한 상태를 탐색하고 동작을 요약합니다.</desc>
 <g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="15" y="35" width="115" height="65"/><rect x="163" y="35" width="115" height="65"/><rect x="310" y="35" width="115" height="65"/></g><g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="72" y="62">Q·D → 식</text><text x="72" y="84">출력 의존성</text><text x="147" y="73">→</text><text x="220" y="62">모든 행 대입</text><text x="220" y="84">전이표</text><text x="294" y="73">→</text><text x="367" y="62">리셋에서 탐색</text><text x="367" y="84">상태도·의미</text></g>
 </svg>
-<p class="diagram-caption">그림 3-11. 조합논리 계산과 상태 도달성 판단을 구별한 분석 흐름입니다.</p>
+<p class="diagram-caption">그림 3-11a. 조합논리 계산과 상태 도달성 판단을 구별한 분석 흐름입니다.</p>
 
 ## 따라 풀기
 
-리셋값 q1q0=00인 두 플립플롭의 입력이 다음과 같다고 합시다. 외부 입력은 없습니다.
+리셋값 q1q0=00인 다음 회로를 읽어 봅시다. 외부 데이터 입력은 없고 두 DFF는 같은 상승 에지 클록을 사용합니다. 리셋 회로와 클록 배선은 생략했습니다.
+
+<svg viewBox="0 0 440 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c3-11b-t c3-11b-d">
+<title id="c3-11b-t">두 상태 비트의 역설계용 기능 회로</title>
+<desc id="c3-11b-d">현재 q1과 q0가 세 조합 블록에 들어갑니다. NOT q1 AND q0는 D1, NOT q1 AND NOT q0는 D0가 되어 두 플립플롭에 저장됩니다. 출력 Y는 q1 AND NOT q0입니다. 플립플롭 Q는 현재 상태 버스로 돌아옵니다.</desc>
+<g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="95" y="30" width="155" height="45"/><rect x="95" y="120" width="155" height="45"/><rect x="95" y="210" width="155" height="45"/><rect x="310" y="30" width="80" height="45"/><rect x="310" y="120" width="80" height="45"/></g><g stroke="var(--ink)" stroke-width="2" fill="none"><path d="M60 20 V235 H95 M60 52 H95 M60 142 H95 M250 52 H310 M250 142 H310 M390 52 H415 V280 H60 V235 M390 142 H415 M250 232 H410"/></g><g fill="var(--ink)"><circle cx="60" cy="52" r="3"/><circle cx="60" cy="142" r="3"/><circle cx="415" cy="142" r="3"/></g><g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="172" y="58">¬q1·q0</text><text x="172" y="148">¬q1·¬q0</text><text x="172" y="238">q1·¬q0</text><text x="280" y="40">D1</text><text x="280" y="130">D0</text><text x="350" y="58">DFF q1</text><text x="350" y="148">DFF q0</text><text x="420" y="238">Y</text><text x="220" y="275">현재 상태 버스 Q[1:0]</text></g>
+</svg>
+<p class="diagram-caption">그림 3-11b. 논리식으로 표시한 조합 블록의 기능도입니다. 오른쪽과 아래의 상태 버스는 q1·q0 두 선을 묶은 표시이며 두 출력을 단락한 배선이 아닙니다.</p>
+
+먼저 DFF 출력 이름을 읽어 현재 상태가 q1·q0 두 비트임을 확인합니다. 각 D 입력까지 거슬러 올라가면 다음 상태식 두 개를 얻습니다. 마지막 블록은 DFF로 들어가지 않고 Y로 나가므로 출력식입니다.
 
 `D1=¬q1·q0`, `D0=¬q1·¬q0`, `Y=q1·¬q0`
 

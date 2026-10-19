@@ -15,7 +15,7 @@
 <desc id="c3-1-d">상태 A는 Q가 0이고 반대 노드가 1입니다. 상태 B는 Q가 1이고 반대 노드가 0입니다. 각 상태에서 두 번의 반전은 원래 값으로 돌아옵니다.</desc>
 <g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="15" y="25" width="190" height="100" rx="8"/><rect x="235" y="25" width="190" height="100" rx="8"/></g><g fill="var(--ink)" font-size="16" text-anchor="middle"><text x="110" y="55">안정 상태 A</text><text x="110" y="85">Q=0 → NOT → 1</text><text x="110" y="110">1 → NOT → Q=0</text><text x="330" y="55">안정 상태 B</text><text x="330" y="85">Q=1 → NOT → 0</text><text x="330" y="110">0 → NOT → Q=1</text></g>
 </svg>
-<p class="diagram-caption">그림 3-1. 게이트 배선 대신 두 안정 상태의 값 관계를 나타낸 개념도입니다.</p>
+<p class="diagram-caption">그림 3-1a. 게이트 배선 대신 두 안정 상태의 값 관계를 나타낸 개념도입니다.</p>
 
 ## SR 래치로 상태 제어하기
 
@@ -29,6 +29,20 @@
 | 1 | 1 | 0 | 0 |
 
 회로식은 `Q=¬(R+Q_bar)`, `Q_bar=¬(S+Q)`입니다. 피드백이므로 단순히 위에서 아래로 한 번 계산하는 대신 일관된 안정 상태를 찾습니다. S=R=1이면 두 출력이 모두 0이라 보수 관계가 깨집니다. 그 뒤 둘을 함께 0으로 내렸을 때 어느 상태로 끝날지 보장하지 않으므로 정상 저장 동작에서는 이 조합을 피합니다.
+
+## 배선을 따라 기억의 원인 확인하기
+
+아래에서 위 NOR의 출력 Q는 아래 NOR의 입력으로, 아래 NOR의 출력 Q_bar는 위 NOR의 입력으로 돌아갑니다. 선이 교차하는 중앙에는 접속점이 없습니다. 출력에서 갈라지는 검은 점만 분기점입니다.
+
+<svg viewBox="0 0 460 265" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c3-1b-t c3-1b-d">
+<title id="c3-1b-t">NOR형 SR 래치의 교차 결합 배선</title>
+<desc id="c3-1b-d">위 NOR는 R과 Q_bar를 받아 Q를 만듭니다. 아래 NOR는 S와 Q를 받아 Q_bar를 만듭니다. 두 피드백 선은 교차하지만 서로 연결되지 않습니다.</desc>
+<g stroke="var(--ink)" stroke-width="2" fill="none"><path d="M120 35 Q145 65 120 95 Q185 98 215 65 Q185 32 120 35 M120 165 Q145 195 120 225 Q185 228 215 195 Q185 162 120 165"/><circle cx="223" cy="65" r="7"/><circle cx="223" cy="195" r="7"/><path d="M35 50 H130 M35 180 H130 M230 65 H420 M230 195 H420 M300 65 V110 L85 150 V210 H130 M330 195 V150 L65 110 V80 H130"/></g>
+<g fill="var(--ink)"><circle cx="300" cy="65" r="3"/><circle cx="330" cy="195" r="3"/></g><g fill="var(--ink)" font-size="15"><text x="15" y="55">R</text><text x="15" y="185">S</text><text x="165" y="70">OR</text><text x="165" y="200">OR</text><text x="425" y="70">Q</text><text x="365" y="220">Q_bar</text><text x="50" y="255">작은 원 = 출력 반전</text></g>
+</svg>
+<p class="diagram-caption">그림 3-1b. OR 모양 뒤의 작은 원은 반전이며, 합쳐서 NOR 게이트입니다. 교차 배선에는 접속점이 없습니다.</p>
+
+S=1을 넣으면 아래 게이트는 다른 입력에 관계없이 Q_bar=0을 만듭니다. 이 0이 위로 돌아가고 R=0이므로 Q=¬(0+0)=1입니다. 이제 S를 0으로 내려도 아래 게이트에는 피드백 Q=1이 남아 Q_bar=¬(0+1)=0입니다. **외부 입력이 사라진 자리를 내부 피드백이 대신하기 때문에** 값이 유지됩니다. R=1에서는 위 게이트가 먼저 Q를 0으로 강제하며 같은 과정을 반대로 추적할 수 있습니다.
 
 ## 따라 풀기
 

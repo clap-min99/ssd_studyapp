@@ -17,7 +17,25 @@
 <desc id="c3-5-d">동적 저장은 차단된 노드의 전하에 의존합니다. 정적 저장은 입력 차단 동안 내부 피드백이 저장값을 복원합니다.</desc>
 <g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="15" y="20" width="190" height="110"/><rect x="235" y="20" width="190" height="110"/></g><g fill="var(--ink)" font-size="15" text-anchor="middle"><text x="110" y="50">동적 노드</text><text x="110" y="80">전하 → 누설·잡음</text><text x="110" y="108">복원 경로 없음</text><text x="330" y="50">정적 노드</text><text x="330" y="80">노드 → 반전 → 반전</text><text x="330" y="108">피드백으로 값 복원</text></g>
 </svg>
-<p class="diagram-caption">그림 3-5. 소자 배선을 생략하고 저장 원리를 비교한 개념도입니다.</p>
+<p class="diagram-caption">그림 3-5a. 소자 배선을 생략하고 저장 원리를 비교한 개념도입니다.</p>
+
+## 유지 구간에도 노드를 구동하는 복원 경로
+
+다음은 양의 레벨 래치의 원리를 보여주는 자체 기능도입니다. TG_in과 TG_fb는 각각 nMOS와 pMOS를 병렬로 묶은 전송 게이트입니다. 그림의 제어 이름은 켜지는 조건이며 개별 트랜지스터의 게이트 배선은 생략했습니다.
+
+<svg viewBox="0 0 440 245" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c3-5b-t c3-5b-d">
+<title id="c3-5b-t">입력 경로와 정적 피드백 경로를 번갈아 여는 래치</title>
+<desc id="c3-5b-d">D는 입력 전송 게이트를 거쳐 저장 노드 X와 두 인버터를 지나 Q가 됩니다. Q는 유지용 전송 게이트를 거쳐 X로 돌아갑니다. 입력 게이트는 CLK가 1일 때, 피드백 게이트는 CLK가 0일 때 켜집니다.</desc>
+<g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="55" y="45" width="80" height="50"/><rect x="195" y="45" width="70" height="50"/><rect x="305" y="45" width="70" height="50"/><rect x="195" y="155" width="80" height="50"/></g><g stroke="var(--ink)" fill="none" stroke-width="2"><path d="M20 70 H55 M135 70 H195 M265 70 H305 M375 70 H415 M395 70 V180 H275 M195 180 H165 V70"/></g><g fill="var(--ink)"><circle cx="165" cy="70" r="3"/><circle cx="395" cy="70" r="3"/></g><g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="15" y="58">D</text><text x="95" y="75">TG_in</text><text x="95" y="30">CLK=1: 켬</text><text x="165" y="58">X</text><text x="230" y="75">NOT</text><text x="340" y="75">NOT</text><text x="420" y="58">Q</text><text x="235" y="185">TG_fb</text><text x="235" y="230">CLK=0: 켬</text></g>
+</svg>
+<p class="diagram-caption">그림 3-5b. 두 인버터와 두 전송 게이트의 복원 원리를 나타낸 기능도입니다. 아래에서 비교하는 책의 12개 소자 구현과 동일한 회로라는 뜻은 아닙니다.</p>
+
+| CLK | TG_in | TG_fb | 저장 노드 X를 구동하는 경로 |
+| --- | --- | --- | --- |
+| 1 | 켬 | 끔 | 외부 D가 X를 구동하고 Q가 D를 따름 |
+| 0 | 끔 | 켬 | Q가 X로 돌아와 두 번 반전된 값을 계속 구동 |
+
+예를 들어 X=1이면 첫 인버터 출력은 0, 둘째 출력 Q는 1입니다. 유지 구간에 Q=1이 다시 X로 연결되므로 작은 교란을 인버터의 이득으로 복원할 수 있습니다. 동적 노드와 달리 커패시터의 전하만 남겨 두는 구조가 아닙니다. 단, 그림은 안정 구간의 기능 모델이며 실제 클록 전환 중 두 경로의 겹침과 소자 시간 조건까지 검증한 회로도는 아닙니다.
 
 ## 정적 래치와 효율적인 플립플롭
 

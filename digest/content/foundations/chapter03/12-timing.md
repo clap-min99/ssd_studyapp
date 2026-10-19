@@ -17,7 +17,7 @@ Setup·Hold와 clock-to-Q 지연을 정의하고, 레지스터 사이 경로의 
 <desc id="c3-12-d">클록 에지는 중앙에 있으며 그 전 t_setup과 그 후 t_hold 동안 D가 안정되어야 합니다. Q의 새 값은 에지 후 t_pcq까지 안정되고 t_ccq 이전에는 바뀌지 않습니다.</desc>
 <rect x="150" y="20" width="145" height="105" fill="var(--accent-soft)"/><g stroke="var(--ink)" fill="none" stroke-width="2"><path d="M55 50 H220 V25 H420 M55 95 H420 M55 135 H300 V115 H420"/><path d="M220 15 V150" stroke-dasharray="4 4"/></g><g fill="var(--ink)" font-size="13"><text x="10" y="50">CLK</text><text x="20" y="95">D</text><text x="20" y="135">Q</text><text x="150" y="170">← setup | hold →</text><text x="300" y="155">Q: 지연 후 갱신</text></g>
 </svg>
-<p class="diagram-caption">그림 3-12. 안정 구간을 강조한 개념 파형이며 Q의 가능한 전환 범위 전체를 그린 것은 아닙니다.</p>
+<p class="diagram-caption">그림 3-12a. 안정 구간을 강조한 개념 파형이며 Q의 가능한 전환 범위 전체를 그린 것은 아닙니다.</p>
 
 ## 최대 지연과 최소 지연은 다른 에지를 본다
 
@@ -30,6 +30,25 @@ Setup·Hold와 clock-to-Q 지연을 정의하고, 레지스터 사이 경로의 
 `t_ccq + t_cd ≥ t_hold`
 
 첫 식은 가장 느린 경로, 둘째 식은 가장 빠른 경로로 검사합니다. 모든 유효 경로를 검사해야 하며, 두 식의 최악 경로가 같을 필요는 없습니다. 레지스터의 `t_pcq+t_setup`은 유용한 조합 연산에 쓸 수 없는 순서 제어 오버헤드입니다.
+
+## 출발 에지와 도착 에지를 한 시간축에 놓기
+
+<svg viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c3-12b-t c3-12b-d">
+<title id="c3-12b-t">레지스터 경로의 setup과 hold 검사 기준</title>
+<desc id="c3-12b-d">R1에서 조합논리를 지나 R2로 갑니다. 시각 0의 같은 에지에서는 hold를 검사하고 다음 에지 T에서는 setup을 검사합니다. R1의 Q는 tccq부터 tpcq 사이에 전환할 수 있습니다.</desc>
+<g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="45" y="15" width="65" height="45"/><rect x="175" y="15" width="125" height="45"/><rect x="365" y="15" width="65" height="45"/></g><g stroke="var(--ink)" fill="none" stroke-width="2"><path d="M110 37 H175 M300 37 H365 M90 110 H120 V90 H150 V110 H365 V90 H395 V110 H435 M90 155 H150 M195 135 H435"/></g><rect x="150" y="130" width="45" height="30" fill="var(--accent-soft)"/><rect x="120" y="180" width="40" height="55" fill="var(--accent-soft)"/><rect x="325" y="180" width="40" height="55" fill="var(--accent-soft)"/><g stroke="var(--muted)" stroke-dasharray="4 4" fill="none"><path d="M120 80 V250 M365 80 V250 M150 135 L195 155 M150 155 L195 135 M195 145 H325"/></g><g fill="var(--ink)" font-size="13" text-anchor="middle"><text x="77" y="43">R1</text><text x="237" y="43">조합논리</text><text x="397" y="43">R2</text><text x="37" y="105">CLK</text><text x="38" y="150">R1.Q</text><text x="153" y="175">t_ccq</text><text x="204" y="175">t_pcq</text><text x="140" y="205">hold</text><text x="345" y="205">setup</text><text x="255" y="228">R2.D 안정 조건</text><text x="120" y="265">0: 출발</text><text x="365" y="265">T_c: 다음 저장</text><text x="230" y="292">hold는 이번 에지, setup은 다음 에지 기준</text></g>
+</svg>
+<p class="diagram-caption">그림 3-12b. 스큐 없는 경로의 개념도이며 비례 축척이 아닙니다. R1.Q 음영은 가능한 전환 범위, 아래 음영은 R2.D가 안정되어야 하는 구간입니다.</p>
+
+시간 원점을 R1과 R2의 이번 상승 에지로 잡아 봅시다.
+
+| 확인할 사건 | 시각 또는 경계 | 검사 |
+| --- | --- | --- |
+| 새 데이터가 R1.Q에서 가장 일찍 출발 | t_ccq | 아직 조합논리를 통과하지 않음 |
+| 새 데이터가 R2.D에 가장 일찍 도착 | t_ccq+t_cd | 이번 에지 뒤 t_hold보다 이르면 안 됨 |
+| 새 데이터가 R2.D에 가장 늦게 안정 | t_pcq+t_pd | 다음 에지 전 T_c−t_setup까지 끝나야 함 |
+
+따라서 hold는 ‘이번에 저장한 옛값을 새 데이터가 너무 일찍 덮지 않는가’, setup은 ‘다음에 저장할 새값이 제때 준비되는가’입니다. 두 질문의 기준 에지가 다르므로, 클록 주기를 늘리면 setup에는 시간이 생겨도 이번 에지 주변의 hold 부족은 그대로 남습니다.
 
 ## 따라 풀기
 

@@ -23,7 +23,7 @@ SR 래치는 S와 R로 저장값을 바꿉니다. 그런데 두 입력을 동시
 <desc id="c3-2-d">CLK가 1인 구간에서는 D의 변화가 Q로 통과하고, CLK가 0인 구간에서는 D가 바뀌어도 Q를 유지합니다.</desc>
 <g fill="var(--accent-soft)"><rect x="85" y="20" width="150" height="115"/></g><g stroke="var(--ink)" stroke-width="2" fill="none"><path d="M60 50 H85 V30 H235 V50 H410 M60 90 H120 V70 H175 V90 H285 V70 H410 M60 130 H120 V110 H175 V130 H410"/></g><g fill="var(--ink)" font-size="14"><text x="10" y="50">CLK</text><text x="20" y="90">D</text><text x="20" y="130">Q</text><text x="100" y="160">투명: D를 따름</text><text x="260" y="160">유지: 변화 차단</text></g>
 </svg>
-<p class="diagram-caption">그림 3-2. 지연을 생략한 개념 파형입니다. Q의 초기값은 0으로 가정했습니다.</p>
+<p class="diagram-caption">그림 3-2. 지연을 생략한 개념 파형입니다. Q의 초기값은 0으로 가정했습니다. 아래 따라 풀기 표와는 별도 입력열이며, 이 그림에서는 D의 첫 변화가 투명 구간 안에 있습니다.</p>
 
 ## 따라 풀기
 
