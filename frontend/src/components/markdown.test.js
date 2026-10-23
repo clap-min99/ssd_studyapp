@@ -50,8 +50,17 @@ test("Markdown sanitization removes executable HTML and preserves lesson content
       const result = parse(source);
       assert.equal(result.querySelectorAll("svg").length, expected, name);
       assert.equal(result.querySelectorAll("details").length, (source.match(/<details>/g) || []).length, name);
+      if (/chapter0[45][\\/]/.test(name)) {
+        assert.equal(result.querySelectorAll("pre code.language-systemverilog").length,
+          (source.match(/```systemverilog/g) || []).length, name);
+        assert.equal(result.querySelectorAll("table").length,
+          (source.match(/^\| ---/gm) || []).length, name);
+      }
       assert.equal(result.querySelector("del"), null, name);
-      assert.doesNotMatch(result.textContent, /\*\*/, name);
+      // SystemVerilog exponentiation (2**N) is valid code, not broken emphasis.
+      const prose = result.cloneNode(true);
+      for (const code of prose.querySelectorAll("pre,code")) code.remove();
+      assert.doesNotMatch(prose.textContent, /\*\*/, name);
       if (expected) {
         diagrams += expected;
         const svg = result.querySelector("svg");
