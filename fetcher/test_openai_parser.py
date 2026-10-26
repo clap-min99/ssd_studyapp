@@ -28,12 +28,17 @@ class OpenAIParserTests(SimpleTestCase):
             with self.subTest(text=text):
                 self.assertTrue(_valid_card_summary(text, 300))
 
-    def test_limits_include_spaces_and_newlines(self):
+    def test_length_targets_are_advisory_and_do_not_trigger_regeneration(self):
         for limit in (80, 300, 350):
             text = "가" * (limit - len(" \n입니다.")) + " \n입니다."
             with self.subTest(limit=limit):
                 self.assertTrue(_valid_card_summary(text, limit))
-                self.assertFalse(_valid_card_summary("가" + text, limit))
+                with self.assertLogs("fetcher.openai_parser", level="WARNING") as logs, \
+                     patch("fetcher.openai_parser._generate_json") as generate:
+                    self.assertTrue(_valid_card_summary("가" + text, limit))
+                    self.assertEqual(_card_summary("가" + text, "제목", "원문", "기사", limit), "가" + text)
+                generate.assert_not_called()
+                self.assertIn(f"{limit + 1}자", logs.output[0])
 
     def test_numbering_markdown_and_mixed_style_are_rejected(self):
         for text in (
@@ -55,7 +60,8 @@ class OpenAIParserTests(SimpleTestCase):
         ]) as generate, self.assertLogs("fetcher.openai_parser", level="WARNING") as logs:
             self.assertEqual(_card_summary(original, "CAPI", "원문", "인사이트", 80), "핵심을 설명합니다.")
         self.assertEqual(generate.call_count, 3)
-        for reason in ("글자 수 초과", "항목 번호 포함", "마크다운 또는 목록 포함", "문체 위반"):
+        self.assertTrue(any("권장 분량 초과" in entry for entry in logs.output))
+        for reason in ("항목 번호 포함", "마크다운 또는 목록 포함", "문체 위반"):
             self.assertTrue(any(reason in entry for entry in logs.output))
             self.assertIn(reason, generate.call_args_list[0].args[0])
         self.assertIn("두 번째이다.", generate.call_args_list[1].args[0])
@@ -70,7 +76,7 @@ class OpenAIParserTests(SimpleTestCase):
         self.assertEqual(_card_summary_errors("   ", 300), ["빈 요약"])
 
     def test_card_summary_checks_length_style_and_numbering(self):
-        for text in ("", "설명이다.", "설명입니다. 다음이다.", "(1) 설명입니다.", "1) 설명입니다.", "① 설명입니다.", "# 설명입니다.", "- 설명입니다.", "가" * 350 + "입니다."):
+        for text in ("", "설명이다.", "설명입니다. 다음이다.", "(1) 설명입니다.", "1) 설명입니다.", "① 설명입니다.", "# 설명입니다.", "- 설명입니다."):
             with self.subTest(text=text):
                 self.assertFalse(_valid_card_summary(text, 350))
         self.assertTrue(_valid_card_summary("개념 설명입니다.\n\n필요한 이유를 설명합니다.", 350))
