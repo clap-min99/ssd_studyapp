@@ -67,6 +67,27 @@ class OpenAIParserTests(SimpleTestCase):
         self.assertIn("두 번째이다.", generate.call_args_list[1].args[0])
         self.assertIn("세 번째예요.", generate.call_args_list[2].args[0])
 
+    def test_failure_diagnostics_include_field_attempt_length_and_sentence(self):
+        invalid = "정상입니다.\n\n반말이다."
+        with patch("fetcher.openai_parser._generate_json", return_value={"summary": invalid}), \
+             self.assertLogs("fetcher.openai_parser", level="WARNING") as logs:
+            with self.assertRaisesMessage(ValueError, "문장 끝='반말이다.'"):
+                _card_summary(invalid, "FADU", "로그에 노출하지 않을 메일 원문", "기사", 300)
+        output = "\n".join(logs.output)
+        for detail in ("제목=FADU", "종류=기사", "재생성=0/3", "재생성=3/3",
+                       f"글자수={len(invalid)}", "권장=300", repr(invalid), "2번째 문장"):
+            self.assertIn(detail, output)
+        self.assertNotIn("로그에 노출하지 않을 메일 원문", output)
+
+    def test_failure_diagnostics_bound_the_logged_summary(self):
+        invalid = "가" * 1000 + "출력에서생략될부분이다."
+        with patch("fetcher.openai_parser._generate_json", return_value={"summary": "정상입니다."}), \
+             self.assertLogs("fetcher.openai_parser", level="WARNING") as logs:
+            _card_summary(invalid, "제목", "원문", "기사", 300)
+        entry = next(entry for entry in logs.output if "검증 대상 요약:" in entry)
+        self.assertIn("1000자 이후 생략", entry)
+        self.assertNotIn("출력에서생략될부분", entry)
+
     def test_retries_stop_after_three_and_report_final_reason(self):
         with patch("fetcher.openai_parser._generate_json", return_value={"summary": "반말이다."}) as generate:
             with self.assertRaisesMessage(ValueError, "학습, 재생성 3회") as error:

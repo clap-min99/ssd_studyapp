@@ -18,9 +18,17 @@ on:
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    env:
+      PYTHONUNBUFFERED: "1"
     steps:
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
+
+      - name: 실행 코드 버전 확인
+        run: |
+          git log -1 --format='commit=%H%nsubject=%s'
+          printf 'event=%s ref=%s attempt=%s\n' "$GITHUB_EVENT_NAME" "$GITHUB_REF" "$GITHUB_RUN_ATTEMPT"
+          sha256sum fetcher/openai_parser.py
 
       - name: Python 설정
         uses: actions/setup-python@v5

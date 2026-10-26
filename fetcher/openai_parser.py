@@ -187,7 +187,7 @@ def _card_summary_errors(text, limit):
     for index, sentence in enumerate(sentences, 1):
         sentence = sentence.rstrip(closers).strip()
         if not sentence.endswith("니다."):
-            errors.append(f"문체 위반: {index}번째 문장은 설명체 존댓말(~합니다/~입니다/~됩니다/~있습니다)과 마침표로 끝나야 합니다")
+            errors.append(f"문체 위반: {index}번째 문장은 설명체 존댓말(~합니다/~입니다/~됩니다/~있습니다)과 마침표로 끝나야 합니다 (문장 끝={sentence[-100:]!r})")
     return errors
 
 
@@ -211,6 +211,9 @@ def _card_summary(text, title, source, kind, limit):
     for attempt in range(4):  # Initial validation plus at most three regenerations.
         for reason in errors:
             logger.warning("요약 검증 실패: 제목=%s 종류=%s 재생성=%d/3 사유=%s", title, kind, attempt, reason)
+        logger.warning("검증 대상 요약: 제목=%s 종류=%s 글자수=%d 권장=%d 재생성=%d/3 내용=%r%s",
+                       title, kind, len(text), limit, attempt, text[:1000],
+                       " (1000자 이후 생략)" if len(text) > 1000 else "")
         if attempt == 3:
             raise ValueError(f"요약 길이·문체 검증 실패: {title} ({kind}, 재생성 3회): {'; '.join(errors)}")
         prompt = (f"제목: {title}\n원문:\n{source}\n\n이전 요약:\n{text}\n\n"
