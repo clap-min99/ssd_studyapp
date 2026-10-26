@@ -159,6 +159,22 @@ class DigestOrderTests(TestCase):
         self.fetch(dry_run=True)
         self.assertFalse(DailyDigest.objects.exists())
 
+    def test_summary_retry_exhaustion_preserves_existing_digest_on_force(self):
+        self.fetch()
+        digest = DailyDigest.objects.get()
+        before = (list(DailyDigest.objects.values()), list(Article.objects.values()),
+                  list(LearningItem.objects.values()))
+        mail, response = mail_and_response()
+        response["articles"][0]["summary"] = "반말이다."
+        with patch("digest.management.commands.fetch_digest.fetch_latest_digest", return_value=mail), \
+             patch("fetcher.openai_parser._generate_json", side_effect=[response] + [{"summary": "반말이다."}] * 3) as generate:
+            with self.assertRaisesMessage(CommandError, "DB 변경 없음"):
+                call_command("fetch_digest", force=True, stdout=StringIO())
+        self.assertEqual(generate.call_count, 4)
+        self.assertEqual(before, (list(DailyDigest.objects.values()), list(Article.objects.values()),
+                                  list(LearningItem.objects.values())))
+        self.assert_feed(digest, 6)
+
     def test_concept_lists_include_saved_source_and_explanation(self):
         self.fetch(count=2, articles=False)
         item = LearningItem.objects.order_by("position").first()

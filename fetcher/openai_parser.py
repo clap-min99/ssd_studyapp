@@ -7,6 +7,7 @@ OPENAI_TAG_MODEL 설정은 기본 모델보다 우선 적용.
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from dataclasses import dataclass, field
@@ -21,6 +22,7 @@ from fetcher.ai_schemas import AnswerOutput, CardSummaryOutput, DigestOutput, So
 load_dotenv()
 
 DEFAULT_MODEL = "gpt-5.4-mini"
+logger = logging.getLogger(__name__)
 
 
 def get_model(task: str) -> str:
@@ -162,15 +164,41 @@ def _none_to_empty(d: dict) -> dict:
 ITEM_NUMBER = r"(?:\(\d+\)|\d+\)|\d+\.(?=\s)|[①-⑳])\s*"
 
 
+def _card_summary_errors(text, limit):
+    """Return independent violations; technical periods are not sentence boundaries."""
+    errors = []
+    if not text.strip():
+        return ["빈 요약"]
+    if len(text) > limit:
+        errors.append(f"글자 수 초과: {len(text)}자 (최대 {limit}자, 공백 포함)")
+    if re.search(rf"(?m)^\s*{ITEM_NUMBER}", text):
+        errors.append("항목 번호 포함")
+    if re.search(
+        r"(?m)^\s*(?:#{1,6}(?:\s|$)|[-+*•]\s|>\s|\|)|`|\*\*|__|~~"
+        r"|(?<!\w)([*_])\S[^\n]*?\1(?!\w)|!?\[[^\]]*\]\([^)]*\)", text
+    ):
+        errors.append("마크다운 또는 목록 포함")
+    # Only Korean sentence punctuation creates a boundary. Decimal versions,
+    # U.S., e.g. and technical identifiers retain their periods. Soft line wraps
+    # are whitespace; closing quotes/parentheses may follow a sentence period.
+    prose = re.sub(r"\s+", " ", text).strip()
+    closers = "\"'’”)]}）」』"
+    sentences = re.split(rf"(?<=[가-힣][.!?])[{re.escape(closers)}]*\s+", prose)
+    for index, sentence in enumerate(sentences, 1):
+        sentence = sentence.rstrip(closers).strip()
+        if not sentence.endswith("니다."):
+            errors.append(f"문체 위반: {index}번째 문장은 설명체 존댓말(~합니다/~입니다/~됩니다/~있습니다)과 마침표로 끝나야 합니다")
+    return errors
+
+
 def _valid_card_summary(text, limit):
-    if not text or len(text) > limit or re.search(rf"(?m)^\s*(?:{ITEM_NUMBER}|#|[-*•]\s)", text):
-        return False
-    return all(sentence.endswith("니다.") for sentence in re.split(r"(?<=[.!?])\s+", text))
+    return not _card_summary_errors(text, limit)
 
 
 def _card_summary(text, title, source, kind, limit):
     text = text.strip()
-    if _valid_card_summary(text, limit):
+    errors = _card_summary_errors(text, limit)
+    if not errors:
         return text
     sentences = "1문장" if kind == "인사이트" else "3~4문장"
     instructions = (
@@ -180,11 +208,19 @@ def _card_summary(text, title, source, kind, limit):
         "기사는 사건·핵심 사실·의미를, 학습 항목은 개념·핵심 원리·필요한 이유를, 인사이트는 개발·학습 관점의 의미를 설명하라. "
         "짧은 원문은 억지로 늘리지 말고, 보통 원문 본문의 절반 안팎으로 줄여라. 문장을 자르거나 원문에 없는 사실을 추가하지 마라."
     )
-    result = _generate_json(f"제목: {title}\n원문:\n{source}", CardSummaryOutput, "parse", instructions)
-    text = result["summary"].strip()
-    if not _valid_card_summary(text, limit):
-        raise ValueError(f"요약 길이·문체 검증 실패: {title}")
-    return text
+    for attempt in range(4):  # Initial validation plus at most three regenerations.
+        for reason in errors:
+            logger.warning("요약 검증 실패: 제목=%s 종류=%s 재생성=%d/3 사유=%s", title, kind, attempt, reason)
+        if attempt == 3:
+            raise ValueError(f"요약 길이·문체 검증 실패: {title} ({kind}, 재생성 3회): {'; '.join(errors)}")
+        prompt = (f"제목: {title}\n원문:\n{source}\n\n이전 요약:\n{text}\n\n"
+                  f"검증 위반 사유:\n" + "\n".join(f"- {reason}" for reason in errors)
+                  + "\n위 위반을 모두 수정하여 다시 작성하라.")
+        result = _generate_json(prompt, CardSummaryOutput, "parse", instructions)
+        text = result["summary"].strip()
+        errors = _card_summary_errors(text, limit)
+        if not errors:
+            return text
 
 
 def parse_digest(raw_text: str) -> ParsedDigest:

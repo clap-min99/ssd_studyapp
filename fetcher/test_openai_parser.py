@@ -9,12 +9,66 @@ from openai import OpenAI
 
 from fetcher.ai_schemas import AnswerOutput, DigestOutput, SourcesOutput, TagsOutput
 from fetcher.openai_parser import (
-    _card_summary, _get_client, _valid_card_summary, check_term_answer, explain_item, extract_sources, get_model,
+    _card_summary, _card_summary_errors, _get_client, _valid_card_summary, check_term_answer, explain_item, extract_sources, get_model,
     parse_digest, tag_article, tag_term,
 )
 
 
 class OpenAIParserTests(SimpleTestCase):
+    def test_technical_punctuation_and_line_wraps_are_valid(self):
+        for text in (
+            "AUTOSAR는 CAPI 1.0을 공개합니다. 호환성을 높입니다.",
+            "1.0 버전과 3.3V 전원을 지원합니다.",
+            "U.S. 기업은 e.g. NVMe 2.0 기술을 활용합니다.",
+            "플랫폼(Adaptive Platform, AP)을\n지원합니다.\n\n개발에 활용됩니다.",
+            "(CAPI 1.0은 공개 구현입니다.) 호환성을 높입니다.",
+            "‘기술 검증에 활용됩니다.’라고 설명합니다.",
+            "“플랫폼을 공개합니다.” 호환성을 높입니다.",
+        ):
+            with self.subTest(text=text):
+                self.assertTrue(_valid_card_summary(text, 300))
+
+    def test_limits_include_spaces_and_newlines(self):
+        for limit in (80, 300, 350):
+            text = "가" * (limit - len(" \n입니다.")) + " \n입니다."
+            with self.subTest(limit=limit):
+                self.assertTrue(_valid_card_summary(text, limit))
+                self.assertFalse(_valid_card_summary("가" + text, limit))
+
+    def test_numbering_markdown_and_mixed_style_are_rejected(self):
+        for text in (
+            "1. 설명입니다.", "설명입니다.\n\n② 설명입니다.",
+            "**기술** 설명입니다.", "`CAPI` 설명입니다.",
+            "*기술* 설명입니다.", "_기술_ 설명입니다.", "~~기술~~ 설명입니다.",
+            "[기술](https://example.com) 설명입니다.", "+ 설명입니다.",
+            "기술이다. 활용됩니다.", "기술이에요. 활용됩니다.",
+            "기술입니다! 활용됩니다.", "기술입니다. 미완성 문장",
+        ):
+            with self.subTest(text=text):
+                self.assertFalse(_valid_card_summary(text, 300))
+
+    def test_logs_each_violation_and_sends_latest_feedback_until_third_retry(self):
+        original = "1. **설명이다.**" + "가" * 80
+        with patch("fetcher.openai_parser._generate_json", side_effect=[
+            {"summary": "두 번째이다."}, {"summary": "세 번째예요."},
+            {"summary": "핵심을 설명합니다."},
+        ]) as generate, self.assertLogs("fetcher.openai_parser", level="WARNING") as logs:
+            self.assertEqual(_card_summary(original, "CAPI", "원문", "인사이트", 80), "핵심을 설명합니다.")
+        self.assertEqual(generate.call_count, 3)
+        for reason in ("글자 수 초과", "항목 번호 포함", "마크다운 또는 목록 포함", "문체 위반"):
+            self.assertTrue(any(reason in entry for entry in logs.output))
+            self.assertIn(reason, generate.call_args_list[0].args[0])
+        self.assertIn("두 번째이다.", generate.call_args_list[1].args[0])
+        self.assertIn("세 번째예요.", generate.call_args_list[2].args[0])
+
+    def test_retries_stop_after_three_and_report_final_reason(self):
+        with patch("fetcher.openai_parser._generate_json", return_value={"summary": "반말이다."}) as generate:
+            with self.assertRaisesMessage(ValueError, "학습, 재생성 3회") as error:
+                _card_summary("최초 반말이다.", "제목", "원문", "학습", 350)
+        self.assertEqual(generate.call_count, 3)
+        self.assertIn("문체 위반", str(error.exception))
+        self.assertEqual(_card_summary_errors("   ", 300), ["빈 요약"])
+
     def test_card_summary_checks_length_style_and_numbering(self):
         for text in ("", "설명이다.", "설명입니다. 다음이다.", "(1) 설명입니다.", "1) 설명입니다.", "① 설명입니다.", "# 설명입니다.", "- 설명입니다.", "가" * 350 + "입니다."):
             with self.subTest(text=text):
