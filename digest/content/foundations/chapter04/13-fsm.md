@@ -39,13 +39,12 @@ endmodule
 
 2비트의 남는 코드 11은 default에서 IDLE로 복귀하도록 RTL에 기술했습니다. 실제 합성 시 FSM 재인코딩이나 불법 상태 최적화 정책은 도구에 따라 달라지므로 물리적인 오류 복구 보장이 필요하면 별도의 구현 검증이 필요합니다.
 
-<svg viewBox="0 0 446 145" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c4-13-t c4-13-d">
-<title id="c4-13-t">FSM 기술: 상태 레지스터·다음 상태·출력</title>
-<desc id="c4-13-d">job_fsm의 전이 조건을 요약한 상태 개념도입니다. IDLE의 start=0과 RUN의 finish=0은 자기 상태를 유지합니다.</desc>
-<g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="12" y="30" width="126" height="85" rx="7"/><rect x="160" y="30" width="126" height="85" rx="7"/><rect x="308" y="30" width="126" height="85" rx="7"/></g>
-<g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="75" y="63">IDLE</text><text x="75" y="91">start=1 → RUN</text><text x="223" y="63">RUN</text><text x="223" y="91">finish=1 → DONE</text><text x="371" y="63">DONE</text><text x="371" y="91">다음 에지 IDLE</text></g>
+<svg viewBox="0 0 450 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c4-13-study-t c4-13-study-d">
+<title id="c4-13-study-t">FSM의 다음 상태 계산과 상태 저장의 피드백</title>
+<desc id="c4-13-study-d">현재 state와 start·finish가 다음 상태 논리로 들어갑니다. next_state가 클록 에지에서 상태 레지스터에 저장되고 state가 다시 계산 입력으로 돌아갑니다. done은 현재 state의 별도 디코드입니다.</desc>
+<rect x="75" y="100" width="120" height="65" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="135.0" y="137.5" font-size="15" text-anchor="middle" fill="var(--ink)">다음 상태</text><rect x="275" y="100" width="105" height="65" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="327.5" y="137.5" font-size="15" text-anchor="middle" fill="var(--ink)">상태 FF</text><rect x="275" y="20" width="105" height="45" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="327.5" y="47.5" font-size="15" text-anchor="middle" fill="var(--ink)">== DONE</text><path d="M25 120 H75 M25 145 H75 M195 130 H275 M380 130 H420 V240 H50 V160 H75 M325 80 V100 M400 130 V42 H380 M275 42 H230" fill="none" stroke="var(--ink)" stroke-width="2"/><circle cx="400" cy="130" r="3" fill="var(--ink)"/><text x="45" y="90" font-size="14" text-anchor="middle" fill="var(--ink)">입력</text><text x="233" y="115" font-size="12" text-anchor="middle" fill="var(--ink)">next_state</text><text x="240" y="230" font-size="14" text-anchor="middle" fill="var(--ink)">state 피드백</text><text x="325" y="78" font-size="14" text-anchor="middle" fill="var(--ink)">clk</text><text x="230" y="30" font-size="13" text-anchor="middle" fill="var(--ink)">done</text>
 </svg>
-<p class="diagram-caption">그림 4-13a. job_fsm의 전이 조건을 요약한 상태 개념도입니다. IDLE의 start=0과 RUN의 finish=0은 자기 상태를 유지합니다.</p>
+<p class="diagram-caption">그림 4-13a. 현재 state와 start·finish가 다음 상태 논리로 들어갑니다. next_state가 클록 에지에서 상태 레지스터에 저장되고 state가 다시 계산 입력으로 돌아갑니다. done은 현재 state의 별도 디코드입니다.</p>
 
 <svg viewBox="0 0 460 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c4-13b-t c4-13b-d">
 <title id="c4-13b-t">작업 완료 표시기의 상태 전이</title>
@@ -56,9 +55,29 @@ endmodule
 </svg>
 <p class="diagram-caption">그림 4-13b. 조건은 상승 에지에서 읽습니다. 가독성을 위해 start=0인 IDLE의 자기 고리와 finish=0인 RUN의 자기 고리는 생략했습니다.</p>
 
+## 명세를 완전한 상태표로 만든 뒤 코드와 대조하기
+
+FSM을 코딩하기 전에는 각 상태에서 어떤 입력을 실제로 읽는지 표시합니다. IDLE은 start만, RUN은 finish만 읽습니다. DONE에서는 입력을 보지 않고 IDLE로 돌아갑니다. 이렇게 명세를 정하면 start=finish=1을 만났을 때도 한 에지에 어디까지 진행하는지 분명해집니다.
+
+| 현재 상태 | 조건 | 다음 상태 | 현재 done |
+| --- | --- | --- | --- |
+| IDLE | start=0 | IDLE | 0 |
+| IDLE | start=1 | RUN | 0 |
+| RUN | finish=0 | RUN | 0 |
+| RUN | finish=1 | DONE | 0 |
+| DONE | 모든 정상 입력 | IDLE | 1 |
+
+이 표의 ‘다음 상태’가 always_comb이고, 그 결과를 다음 상승 에지에 state로 옮기는 것이 always_ff입니다. 현재 done 열은 assign의 현재 상태 디코드입니다. 세 블록을 표의 각 열과 대응시키면 state와 next_state를 뒤바꾼 코드를 찾기 쉽습니다. reset=1인 에지의 IDLE 강제는 표보다 우선하는 초기화 계약입니다.
+
 ## 따라 풀기
 
 리셋 직후 IDLE,done=0입니다. E1 직전 start=finish=1이면 E1 후 RUN,done=0입니다. E2 직전 start=0,finish=1이면 E2 후 DONE,done=1입니다. E3 후에는 입력과 관계없이 IDLE,done=0입니다. done은 두 번째 에지 후부터 세 번째 에지 후까지 한 주기 활성입니다. 상태표를 이 순서와 대조하면 start와 finish를 같은 에지에 처리한 잘못된 구현을 찾을 수 있습니다.
+
+### 조건을 바꾸어 한 번 더 풀기
+
+start가 계속 1이고 finish도 계속 1이라고 합시다. 리셋 이후 각 에지 직후 상태는 RUN,DONE,IDLE,RUN,DONE,IDLE로 반복됩니다. 첫 RUN은 start를 받아서, DONE은 직전 RUN이 finish를 받아서 생깁니다. DONE에서 IDLE로 복귀한 그 에지에 start를 다시 읽어 RUN으로 곧바로 넘어가지는 않습니다.
+
+반대로 finish가 RUN에 들어오기 전 잠깐 1이었다가 사라지면 이 FSM은 그 과거 사건을 기억하지 않습니다. ‘완료 펄스를 언제 허용하는가’도 인터페이스 명세에 필요하며, 코드를 고치기 전에 외부 입력의 유효 시점을 정해야 합니다.
 
 ## 헷갈리기 쉬운 점
 
@@ -75,6 +94,16 @@ next_state는 별도 저장 신호가 아닙니다. next_state를 always_ff에�
 <p>1. RUN을 유지합니다. RUN에서는 start를 사용하지 않습니다.</p>
 <p>2. 아닙니다. 명세상 IDLE로 돌아가고 이후 에지에서 start를 다시 읽습니다.</p>
 <p>3. 출력이 state만의 함수이기 때문입니다.</p>
+</details>
+
+### 적용 문제: 직접 구성하고 이유 설명하기
+
+리셋 후 start 입력열은 1,0,1,1이고 finish는 0,1,1,0입니다. 네 에지 직후 상태와 done을 구하세요. 마지막 에지의 start=1이 무시되는지 여부도 설명하세요.
+
+<details>
+<summary>적용 문제 풀이와 검산</summary>
+<p>E1 후 RUN/0, E2 후 DONE/1, E3 후 IDLE/0, E4 후 RUN/0입니다.</p>
+<p>E3에서는 직전 상태가 DONE이므로 start=1을 사용하지 않고 IDLE로 돌아갑니다. E4에서는 직전 상태가 IDLE이므로 start=1을 받아 RUN으로 갑니다. 같은 입력값도 현재 상태에 따라 역할이 달라집니다.</p>
 </details>
 
 ## 다음으로 이어가기

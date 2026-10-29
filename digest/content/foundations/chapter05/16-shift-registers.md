@@ -26,17 +26,37 @@ endmodule
 
 이 코드는 매 상승 에지마다 이동하며 유지 enable은 없습니다. 필요하면 명세와 코드를 함께 확장합니다. N비트 일반화에서 `{q[N-2:0],serial_in}`은 N=1의 경계가 문제가 되므로 폭 제한 또는 generate 분기가 필요합니다. 고정 4비트 예제를 그 조건 없이 복사하지 않습니다.
 
-<svg viewBox="0 0 446 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c5-16-t c5-16-d">
-<title id="c5-16-t">시프트 레지스터: 직렬·병렬 데이터 바꾸기</title>
-<desc id="c5-16-d">새 입력·저장된 비트·직렬 출력의 관계를 나타낸 개념도입니다. 이동은 상승 에지에서만 일어납니다.</desc>
-<g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="12" y="25" width="126" height="90" rx="7"/><rect x="160" y="25" width="126" height="90" rx="7"/><rect x="308" y="25" width="126" height="90" rx="7"/></g>
-<g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="75" y="59">serial_in</text><text x="75" y="87">에지에서 bit0로</text><text x="223" y="59">q[3:0]</text><text x="223" y="87">각 비트 한 칸 이동</text><text x="371" y="59">serial_out</text><text x="371" y="87">현재 q[3]</text></g>
+<svg viewBox="0 0 450 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c5-16-study-t c5-16-study-d">
+<title id="c5-16-study-t">시프트 레지스터의 단계별 직렬 연결</title>
+<desc id="c5-16-study-d">Sin이 Q0 단계로 들어가고 Q0→Q1→Q2→Q3 순서로 이동합니다. Q3가 Sout입니다. 같은 clk를 공유하며 reset·병렬 load MUX는 생략한 기능 회로입니다.</desc>
+<rect x="55" y="70" width="65" height="60" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="87.5" y="105.0" font-size="15" text-anchor="middle" fill="var(--ink)">Q0</text><path d="M120 100 H150" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M87 175 V130" fill="none" stroke="var(--ink)" stroke-width="2"/><rect x="150" y="70" width="65" height="60" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="182.5" y="105.0" font-size="15" text-anchor="middle" fill="var(--ink)">Q1</text><path d="M215 100 H245" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M182 175 V130" fill="none" stroke="var(--ink)" stroke-width="2"/><rect x="245" y="70" width="65" height="60" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="277.5" y="105.0" font-size="15" text-anchor="middle" fill="var(--ink)">Q2</text><path d="M310 100 H340" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M277 175 V130" fill="none" stroke="var(--ink)" stroke-width="2"/><rect x="340" y="70" width="65" height="60" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="372.5" y="105.0" font-size="15" text-anchor="middle" fill="var(--ink)">Q3</text><path d="M372 175 V130" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M15 100 H55 M405 100 H435 M35 175 H372" fill="none" stroke="var(--ink)" stroke-width="2"/><text x="40" y="70" font-size="14" text-anchor="middle" fill="var(--ink)">Sin</text><text x="420" y="70" font-size="14" text-anchor="middle" fill="var(--ink)">Sout</text><text x="35" y="200" font-size="14" text-anchor="middle" fill="var(--ink)">clk</text><text x="225" y="235" font-size="14" text-anchor="middle" fill="var(--ink)">같은 에지에서 각 단계가 이전 단계의 값을 저장</text>
 </svg>
-<p class="diagram-caption">그림 5-16. 새 입력·저장된 비트·직렬 출력의 관계를 나타낸 개념도입니다. 이동은 상승 에지에서만 일어납니다.</p>
+<p class="diagram-caption">그림 5-16. Sin이 Q0 단계로 들어가고 Q0→Q1→Q2→Q3 순서로 이동합니다. Q3가 Sout입니다. 같은 clk를 공유하며 reset·병렬 load MUX는 생략한 기능 회로입니다.</p>
+
+## 직렬 비트 순서를 에지 전후 표로 복원하기
+
+`{q[2:0],serial_in}`은 이전 q의 bit2·1·0을 새 bit3·2·1로 옮기고 새 bit0에 serial_in을 넣습니다. 네 플립플롭이 같은 에지에서 이전 값을 읽으므로 새 비트가 한 에지에 모든 단계를 통과하지 않습니다. 두 단계 파이프라인에서 배운 nonblocking의 의미가 그대로 이어집니다.
+
+병렬 load는 이동 경로 대신 d를 네 저장 위치에 동시에 넣습니다. 다음 shift부터 이전 MSB가 빠져나갑니다. serial_out은 단순히 현재 q[3]에 연결했으므로 첫 shift 에지 직전의 출력과 직후의 출력은 다를 수 있습니다. 받는 회로가 같은 에지에 읽는다면 직전 MSB를 샘플한다는 점을 표의 열 이름에 명시합니다.
+
+직렬에서 병렬로 모을 때 먼저 입력한 비트가 가장 높은 자리에 도달합니다. 반대로 병렬 데이터를 직렬로 보낼 때도 이 구조는 MSB부터 보냅니다. 데이터의 표현과 프로토콜의 전송 순서는 각각 별도 계약이며, LSB 우선 송신기가 필요하면 연결 방향을 다시 정해야 합니다.
 
 ## 따라 풀기
 
 리셋 후 serial_in=1,0,1,1을 네 에지에 넣으면 q는 0001,0010,0101,1011입니다. 병렬 데이터 1011을 load한 뒤 serial_in=0으로 계속 shift하면 에지 직전 빠져나가는 비트는 1,0,1,1입니다. 각 에지 직후 q는 0110,1100,1000,0000입니다. serial_out의 에지 전 값과 직후 값을 뒤섞지 않으면 원래 1011을 복원할 수 있습니다.
+
+### 조건을 바꾸어 한 번 더 풀기
+
+d=1101을 load한 뒤 serial_in=0으로 네 번 shift합니다.
+
+| shift 에지 | 직전 q | 수신할 serial_out | 직후 q |
+| --- | --- | --- | --- |
+| 1 | 1101 | 1 | 1010 |
+| 2 | 1010 | 1 | 0100 |
+| 3 | 0100 | 0 | 1000 |
+| 4 | 1000 | 1 | 0000 |
+
+출력열 1,1,0,1이 원래 데이터의 MSB부터 일치합니다. 직후 q[3]만 읽어 1,0,1,0으로 기록하면 한 비트 밀린 결과를 얻습니다. 출력 배선이 아니라 관찰 시점이 문제일 수 있습니다.
 
 ## 헷갈리기 쉬운 점
 
@@ -53,6 +73,16 @@ endmodule
 <p>1. d를 저장합니다. shift는 실행하지 않습니다.</p>
 <p>2. 0011입니다. 이전 bit3=1은 빠져나갑니다.</p>
 <p>3. setup/hold를 만족했다면 갱신 전 값입니다.</p>
+</details>
+
+### 적용 문제: 직접 구성하고 이유 설명하기
+
+리셋 후 0,1,1,0을 serial_in에 넣어 네 번 이동합니다. 각 에지 직후 q와 최종 병렬 값의 비트 순서를 구하세요. 마지막 두 비트만 교환해서 입력하면 어떤 두 위치가 달라지나요?
+
+<details>
+<summary>적용 문제 풀이와 검산</summary>
+<p>0000→0001→0011→0110입니다. 최종 q[3:0]은 입력 순서 0,1,1,0 그대로입니다.</p>
+<p>마지막 두 입력을 0,1로 교환하면 전체 입력열 0,1,0,1이 되어 최종 0101입니다. 마지막으로 들어온 두 비트가 q[1:0]에 있으므로 그 두 위치가 달라집니다.</p>
 </details>
 
 ## 다음으로 이어가기

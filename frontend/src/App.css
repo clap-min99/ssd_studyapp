@@ -22,7 +22,7 @@
 
 .main-content {
   flex: 1;
-  padding: 20px 16px 90px;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px 90px;
   overflow-y: auto;
 }
 

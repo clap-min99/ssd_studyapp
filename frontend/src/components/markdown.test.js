@@ -40,6 +40,15 @@ test("Markdown sanitization removes executable HTML and preserves lesson content
     assert.equal(result.querySelector("a").href, "https://example.com/news");
   });
 
+  await t.test("preserves the arithmetic shift operator in chapter 5 lesson 9 prose", async () => {
+    const source = await readFile(new URL("../../../digest/content/foundations/chapter05/09-shifters.md", import.meta.url), "utf8");
+    const result = parse(source);
+    assert.equal(result.querySelector("blockquote"), null);
+    const operator = [...result.querySelectorAll("p > code")].find((code) => code.textContent === ">>>");
+    assert.ok(operator, "arithmetic shift operator must remain visible as inline code");
+    assert.match(operator.parentElement.textContent, /^>>>의 왼쪽 피연산자가 unsigned/);
+  });
+
   await t.test("preserves existing foundation SVG diagrams and accessible labels", async () => {
     const folder = new URL("../../../digest/content/foundations/", import.meta.url);
     const files = (await readdir(folder, { recursive: true })).filter((name) => name.endsWith(".md"));

@@ -23,17 +23,39 @@ endmodule
 
 이 코드는 기능 모델입니다. 실제 하드웨어에서 setup·hold를 만족해야 한다는 3장의 조건은 사라지지 않습니다. 일반 RTL 시뮬레이션이 에지에서 값을 복사했다고 실제 회로의 물리 타이밍까지 확인한 것은 아닙니다.
 
-<svg viewBox="0 0 446 145" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c4-7-t c4-7-d">
-<title id="c4-7-t">레지스터 기술: 상승 에지에서 값 저장하기</title>
-<desc id="c4-7-d">한 상승 에지에서 3비트 레지스터를 갱신하는 사건 순서입니다. 실제 clock-to-Q 지연값을 그린 시간도는 아닙니다.</desc>
-<g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="12" y="30" width="126" height="85" rx="7"/><rect x="160" y="30" width="126" height="85" rx="7"/><rect x="308" y="30" width="126" height="85" rx="7"/></g>
-<g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="75" y="63">에지 직전</text><text x="75" y="91">d=101·q=010</text><text x="223" y="63">상승 에지</text><text x="223" y="91">오른쪽 d 평가</text><text x="371" y="63">갱신 후</text><text x="371" y="91">q=101 유지</text></g>
+<svg viewBox="0 0 450 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c4-7-study-t c4-7-study-d">
+<title id="c4-7-study-t">상승 에지에서만 갱신되는 한 비트의 시간도</title>
+<desc id="c4-7-study-d">sample3의 bit0만 보인 이상적 기능 시간도입니다. 시작 전에 q[0]=0을 저장했다고 가정합니다. 5ns에는 d[0]=1을,15ns에는 0을 샘플하고 하강 에지는 무시합니다. 물리 지연은 생략했습니다.</desc>
+<path d="M110 20 V215" fill="none" stroke="var(--border)" stroke-dasharray="4 4"/><path d="M185 20 V215" fill="none" stroke="var(--border)" stroke-dasharray="4 4"/><path d="M260 20 V215" fill="none" stroke="var(--border)" stroke-dasharray="4 4"/><path d="M335 20 V215" fill="none" stroke="var(--border)" stroke-dasharray="4 4"/><path d="M410 20 V215" fill="none" stroke="var(--border)" stroke-dasharray="4 4"/><text x="15" y="45" font-size="15" text-anchor="start" fill="var(--ink)">clk</text><path d="M110.0 60 L147.5 60 L147.5 60 L185.0 60 L185.0 35 L222.5 35 L222.5 35 L260.0 35 L260.0 60 L297.5 60 L297.5 60 L335.0 60 L335.0 35 L372.5 35 L372.5 35 L410.0 35" fill="none" stroke="var(--ink)" stroke-width="2"/><text x="15" y="110" font-size="15" text-anchor="start" fill="var(--ink)">d[0]</text><path d="M110.0 125 L147.5 125 L147.5 100 L185.0 100 L185.0 100 L222.5 100 L222.5 125 L260.0 125 L260.0 125 L297.5 125 L297.5 125 L335.0 125 L335.0 125 L372.5 125 L372.5 100 L410.0 100" fill="none" stroke="var(--ink)" stroke-width="2"/><text x="15" y="175" font-size="15" text-anchor="start" fill="var(--ink)">q[0]</text><path d="M110.0 190 L147.5 190 L147.5 190 L185.0 190 L185.0 165 L222.5 165 L222.5 165 L260.0 165 L260.0 165 L297.5 165 L297.5 165 L335.0 165 L335.0 190 L372.5 190 L372.5 190 L410.0 190" fill="none" stroke="var(--ink)" stroke-width="2"/><text x="110" y="243" font-size="14" text-anchor="middle" fill="var(--ink)">0</text><text x="185" y="243" font-size="14" text-anchor="middle" fill="var(--ink)">5</text><text x="260" y="243" font-size="14" text-anchor="middle" fill="var(--ink)">10</text><text x="335" y="243" font-size="14" text-anchor="middle" fill="var(--ink)">15</text><text x="410" y="243" font-size="14" text-anchor="middle" fill="var(--ink)">20ns</text>
 </svg>
-<p class="diagram-caption">그림 4-7. 한 상승 에지에서 3비트 레지스터를 갱신하는 사건 순서입니다. 실제 clock-to-Q 지연값을 그린 시간도는 아닙니다.</p>
+<p class="diagram-caption">그림 4-7. sample3의 bit0만 보인 이상적 기능 시간도입니다. 시작 전에 q[0]=0을 저장했다고 가정합니다. 5ns에는 d[0]=1을,15ns에는 0을 샘플하고 하강 에지는 무시합니다. 물리 지연은 생략했습니다.</p>
+
+## 입력 변화와 저장 사건을 같은 시간축에 놓기
+
+레지스터를 이해하려면 d와 q의 역할을 분리해야 합니다. d는 다음에 저장할 후보이고 q는 마지막 유효 에지에서 저장한 결과입니다. d가 새 값을 가졌다는 사실만으로 q가 바뀌지 않습니다. 상승 에지 사건이 있어야 비로소 d를 평가합니다.
+
+`q<=d`에서는 오른쪽 d를 읽는 순간과 q가 갱신되는 시뮬레이션 단계가 구분됩니다. 따라서 같은 상승 에지를 기다리는 다른 블록이 q를 즉시 읽으면 직전 값이 보일 수 있습니다. 테스트벤치가 그 뒤 `#1` 같은 관찰 간격을 두는 이유가 여기 있습니다. 이 간격은 실제 clock-to-Q 값을 지정한다는 뜻이 아닙니다.
+
+이 모듈은 q를 계산하는 조합식이 없습니다. 각 비트는 같은 클록을 받는 독립적인 D 플립플롭이고 d[0]이 q[2]로 섞여 들어가지 않습니다. 저장한 값은 다음 상승 에지까지 유지되며 하강 에지에서도 유지됩니다. 초기값이 중요하면 뒤 레슨의 reset 계약을 추가합니다.
 
 ## 따라 풀기
 
 첫 상승 에지가 5ns이고 직전 d=101입니다. 갱신 후 q=101이 됩니다. 7ns에 d=011로 바뀌어도 q는 101입니다. 다음 상승 에지가 15ns이고 직전 d=110이면 갱신 후 q=110입니다. 7ns의 011은 에지에서 읽히지 않았으므로 저장되지 않습니다. 에지마다 입력 하나를 샘플한다는 규칙으로 검산합니다.
+
+### 조건을 바꾸어 한 번 더 풀기
+
+상승 에지가 5ns와 15ns인 경우를 사건표로 자세히 적습니다.
+
+| 시각 | 사건 | d | 사건 처리 후 q |
+| --- | --- | --- | --- |
+| 0ns | 시작·리셋 없음 | 001 | XXX |
+| 5ns | 상승 에지 | 001 | 001 |
+| 8ns | d 변경 | 110 | 001 |
+| 10ns | 하강 에지 | 110 | 001 |
+| 12ns | d 변경 | 010 | 001 |
+| 15ns | 상승 에지 | 010 | 010 |
+
+110은 한동안 입력에 있었지만 어떤 상승 에지에서도 읽히지 않았습니다. 이 입력열을 모두 저장하는 회로가 필요하다면 샘플 주기나 입력 프로토콜부터 바꾸어야 합니다.
 
 ## 헷갈리기 쉬운 점
 
@@ -50,6 +72,16 @@ always_ff는 반복문으로 값이 계속 흘러가는 코드가 아닙니다. 
 <p>1. 기존 값을 유지합니다.</p>
 <p>2. 3비트입니다. 두 클록 사이에도 상태가 남습니다.</p>
 <p>3. 아닙니다. 리셋 없는 초기 상태일 수 있습니다. 사용 전에 초기화하거나 유효 샘플이 들어오도록 명세해야 합니다.</p>
+</details>
+
+### 적용 문제: 직접 구성하고 이유 설명하기
+
+5ns에 q=101을 저장했습니다. d는 9ns에 000,14ns에 111이 됩니다. 10ns는 하강,15ns는 상승입니다. 10ns와 15ns 갱신 후 q를 적고, d가 15ns와 정확히 동시에 변하도록 시험하면 왜 문제가 되는지 설명하세요.
+
+<details>
+<summary>적용 문제 풀이와 검산</summary>
+<p>10ns 후에는 101을 유지하고 15ns 갱신 후에는 111입니다. 하강 에지는 이 모듈의 저장 사건이 아닙니다.</p>
+<p>입력 변경과 샘플을 같은 시뮬레이션 시각에 경쟁시키면 실행 순서에 의존하는 검사가 될 수 있습니다. 입력을 이전 하강 에지 등에 준비하고 갱신 후 별도 시점에 관찰합니다. 실제 회로의 setup/hold 조건도 별도입니다.</p>
 </details>
 
 ## 다음으로 이어가기

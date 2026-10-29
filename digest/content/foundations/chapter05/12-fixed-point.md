@@ -16,17 +16,30 @@ U a.b와 Q a.b의 범위·해상도를 구하고 같은 배율의 덧셈과 곱�
 
 고정소수점은 소수점 저장 장치가 따로 없으므로 같은 비트를 다르게 해석해도 하드웨어가 알려주지 않습니다. 모듈 입출력 명세에 폭·signed·배율을 함께 적어야 합니다.
 
-<svg viewBox="0 0 446 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c5-12-t c5-12-d">
-<title id="c5-12-t">고정소수점: 비트 패턴에 배율 약속하기</title>
-<desc id="c5-12-d">Q3.3의 저장과 해석 배율을 나타낸 개념도입니다.</desc>
-<g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="12" y="25" width="126" height="90" rx="7"/><rect x="160" y="25" width="126" height="90" rx="7"/><rect x="308" y="25" width="126" height="90" rx="7"/></g>
-<g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="75" y="59">6비트 Q3.3</text><text x="75" y="87">부호 포함 3·소수 3</text><text x="223" y="59">저장 정수</text><text x="223" y="87">실제 값 × 8</text><text x="371" y="59">해석</text><text x="371" y="87">2의 보수 정수 / 8</text></g>
+<svg viewBox="0 0 450 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c5-12-study-t c5-12-study-d">
+<title id="c5-12-study-t">Q3.3의 비트별 가중치</title>
+<desc id="c5-12-study-d">Q3.3은 부호 포함 정수 세 비트와 소수 세 비트입니다. 왼쪽부터 가중치를 붙여 패턴 101010을 해석합니다. 세 번째와 네 번째 사이 세로선은 암묵적 소수점 위치입니다.</desc>
+<text x="225" y="25" font-size="15" text-anchor="middle" fill="var(--ink)">Q3.3 · 총 6비트 · 실제 값 = 저장 정수 / 8</text><text x="51" y="65" font-size="14" text-anchor="middle" fill="var(--ink)">−4</text><rect x="20" y="80" width="62" height="48" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="51.0" y="109.0" font-size="15" text-anchor="middle" fill="var(--ink)">1</text><text x="119" y="65" font-size="14" text-anchor="middle" fill="var(--ink)">2</text><rect x="88" y="80" width="62" height="48" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="119.0" y="109.0" font-size="15" text-anchor="middle" fill="var(--ink)">0</text><text x="187" y="65" font-size="14" text-anchor="middle" fill="var(--ink)">1</text><rect x="156" y="80" width="62" height="48" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="187.0" y="109.0" font-size="15" text-anchor="middle" fill="var(--ink)">1</text><text x="255" y="65" font-size="14" text-anchor="middle" fill="var(--ink)">1/2</text><rect x="224" y="80" width="62" height="48" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="255.0" y="109.0" font-size="15" text-anchor="middle" fill="var(--ink)">0</text><text x="323" y="65" font-size="14" text-anchor="middle" fill="var(--ink)">1/4</text><rect x="292" y="80" width="62" height="48" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="323.0" y="109.0" font-size="15" text-anchor="middle" fill="var(--ink)">1</text><text x="391" y="65" font-size="14" text-anchor="middle" fill="var(--ink)">1/8</text><rect x="360" y="80" width="62" height="48" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="391.0" y="109.0" font-size="15" text-anchor="middle" fill="var(--ink)">0</text><path d="M220 72 V142" fill="none" stroke="var(--ink)" stroke-width="2"/><text x="225" y="175" font-size="16" text-anchor="middle" fill="var(--ink)">−4 + 1 + 1/4 = −2.75</text><text x="225" y="205" font-size="13" text-anchor="middle" fill="var(--ink)">101010을 2의 보수 정수로 읽으면 −22 · −22/8 = −2.75</text>
 </svg>
-<p class="diagram-caption">그림 5-12. Q3.3의 저장과 해석 배율을 나타낸 개념도입니다.</p>
+<p class="diagram-caption">그림 5-12. Q3.3은 부호 포함 정수 세 비트와 소수 세 비트입니다. 왼쪽부터 가중치를 붙여 패턴 101010을 해석합니다. 세 번째와 네 번째 사이 세로선은 암묵적 소수점 위치입니다.</p>
+
+## 비트의 자릿값과 배율을 같은 표에 적기
+
+Q3.3의 6비트 가중치는 왼쪽부터 −4,2,1,1/2,1/4,1/8입니다. 부호 비트를 제외한 양수 자릿값은 일반 이진 분수와 같고 최상위만 음의 가중치를 가집니다. 101010은 −4+1+1/4=−2.75입니다. 동일 패턴을 먼저 signed 정수 −22로 읽고 8로 나누어도 −2.75이므로 두 방식이 서로 검산이 됩니다.
+
+덧셈은 두 저장 정수의 배율이 같아야 합니다. 소수 3비트인 저장값 8과 소수 4비트인 저장값 8은 각각 1과 0.5이므로 그대로 더한 16의 해석은 정해지지 않습니다. 예를 들어 소수 4비트로 맞추려면 첫 값을 16으로 확장한 뒤 8을 더해 24,즉 1.5로 읽어야 합니다.
+
+양자화는 표현 격자에 없는 값을 어느 이웃으로 보낼지 고르는 과정입니다. 소수 3비트의 간격은 0.125입니다. 0.2는 0.125와 0.25 사이이며 가장 가까운 값은 0.25,양수의 하위 비트 절삭은 0.125입니다. 격자·반올림·범위 처리를 구별해 적습니다.
 
 ## 따라 풀기
 
 Q3.3에서 1.25는 1.25×8=10으로 001010, −0.375는 −3을 저장하므로 111101입니다. 합은 001010+111101=1_000111이고 하위 6비트 000111을 8로 나누면 0.875입니다. 1.25−0.375=0.875로 검산합니다. 1.25×0.5는 저장 정수 10×4=40, 소수 6비트 결과이므로 40/64=0.625입니다. Q3.3으로 줄이면 저장 정수 5가 되어 정확히 표현됩니다.
+
+### 조건을 바꾸어 한 번 더 풀기
+
+Q3.3의 1.375와 0.625를 곱합니다. 저장 정수는 각각 11과 5입니다. 전체 곱은 55이며 소수 비트가 6개이므로 실제 값 55/64=0.859375입니다.
+
+다시 소수 3비트로 줄이려면 저장 정수 55를 8로 나눈 6.875를 정수화합니다. 양수 절삭이면 6을 저장해 0.75,가장 가까운 값이면 7을 저장해 0.875입니다. 전체 곱이 잘 계산되어도 재양자화에서 오차가 생깁니다. 단순히 소수점 위치만 다시 붙이는 작업이 아닙니다.
 
 ## 헷갈리기 쉬운 점
 
@@ -43,6 +56,16 @@ Q3.3에서 1.25는 1.25×8=10으로 001010, −0.375는 −3을 저장하므로 
 <p>1. 100000으로 −32/8=−4입니다.</p>
 <p>2. 1/16=0.0625입니다.</p>
 <p>3. 7비트입니다. 2³×2⁴의 배율이 곱해집니다.</p>
+</details>
+
+### 적용 문제: 직접 구성하고 이유 설명하기
+
+Q3.3에서 001101과 111010의 실제 값을 각각 구하고 합을 계산하세요. 비트 덧셈과 십진 덧셈으로 두 번 검산하고 범위 초과 여부를 판단하세요.
+
+<details>
+<summary>적용 문제 풀이와 검산</summary>
+<p>001101은 저장 정수 13이므로 1.625입니다. 111010은 6비트 signed 정수 −6이므로 −0.75입니다. 합은 0.875입니다.</p>
+<p>13+(−6)=7, 하위 6비트 000111을 8로 나누면 0.875입니다. 범위 −4부터 3.875 안이므로 overflow가 없습니다. 부호가 다른 두 값의 덧셈이라는 점도 확인합니다.</p>
 </details>
 
 ## 다음으로 이어가기

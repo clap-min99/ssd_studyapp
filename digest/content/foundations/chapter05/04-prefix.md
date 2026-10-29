@@ -16,17 +16,30 @@ CLA는 블록 전체의 생성/전파를 계산했습니다. 이 계산을 2자�
 
 N이 2의 거듭제곱인 대표 트리의 논리 단계 모델은 `t_prefix≈t_pg+log₂(N)·t_merge+t_XOR`입니다. 합에 쓰는 A XOR B는 미리 계산된다고 가정합니다. 실제 프리픽스 종류마다 셀 수·팬아웃·배선 길이가 달라지며 단계 수만으로 구현 속도와 전력을 보장하지 않습니다.
 
-<svg viewBox="0 0 446 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c5-4-t c5-4-d">
-<title id="c5-4-t">[선택 심화] 프리픽스 덧셈기: 캐리 조건을 트리로 합치기</title>
-<desc id="c5-4-d">프리픽스 계산의 구간 확장을 나타낸 개념도입니다. 특정 프리픽스 배선망을 그대로 재현한 그림은 아닙니다.</desc>
-<g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="12" y="25" width="126" height="90" rx="7"/><rect x="160" y="25" width="126" height="90" rx="7"/><rect x="308" y="25" width="126" height="90" rx="7"/></g>
-<g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="75" y="59">2자리 구간</text><text x="75" y="87">이웃 G/P 결합</text><text x="223" y="59">4·8자리 구간</text><text x="223" y="87">구간을 다시 결합</text><text x="371" y="59">각 자리 캐리</text><text x="371" y="87">누적 G/P로 계산</text></g>
+<svg viewBox="0 0 450 275" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c5-4-study-t c5-4-study-d">
+<title id="c5-4-study-t">4비트 구간의 프리픽스 결합</title>
+<desc id="c5-4-study-d">bit3·2를 상위 구간,bit1·0을 하위 구간으로 먼저 결합한 뒤 두 구간을 합칩니다. 모든 셀은 G=G_H+P_H·G_L,P=P_H·P_L을 계산합니다. 전체 블록 G/P의 예이며 모든 prefix 배선은 생략했습니다.</desc>
+<rect x="35" y="35" width="60" height="36" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="65.0" y="58.0" font-size="15" text-anchor="middle" fill="var(--ink)">bit3</text><rect x="135" y="35" width="60" height="36" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="165.0" y="58.0" font-size="15" text-anchor="middle" fill="var(--ink)">bit2</text><rect x="255" y="35" width="60" height="36" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="285.0" y="58.0" font-size="15" text-anchor="middle" fill="var(--ink)">bit1</text><rect x="355" y="35" width="60" height="36" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="385.0" y="58.0" font-size="15" text-anchor="middle" fill="var(--ink)">bit0</text><rect x="85" y="115" width="100" height="45" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="135.0" y="142.5" font-size="15" text-anchor="middle" fill="var(--ink)">[3:2]</text><rect x="275" y="115" width="100" height="45" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="325.0" y="142.5" font-size="15" text-anchor="middle" fill="var(--ink)">[1:0]</text><rect x="175" y="205" width="100" height="45" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="225.0" y="232.5" font-size="15" text-anchor="middle" fill="var(--ink)">[3:0]</text><path d="M65 71 V93 H110 V115 M165 71 V115 M285 71 V115 M385 71 V93 H350 V115 M135 160 V183 H200 V205 M325 160 V183 H250 V205" fill="none" stroke="var(--ink)" stroke-width="2"/>
 </svg>
-<p class="diagram-caption">그림 5-4. 프리픽스 계산의 구간 확장을 나타낸 개념도입니다. 특정 프리픽스 배선망을 그대로 재현한 그림은 아닙니다.</p>
+<p class="diagram-caption">그림 5-4. bit3·2를 상위 구간,bit1·0을 하위 구간으로 먼저 결합한 뒤 두 구간을 합칩니다. 모든 셀은 G=G_H+P_H·G_L,P=P_H·P_L을 계산합니다. 전체 블록 G/P의 예이며 모든 prefix 배선은 생략했습니다.</p>
+
+## 결합식이 성립하는 이유와 순서의 의미
+
+낮은 구간 L을 지난 캐리를 c_mid=G_L+P_L·c_in이라 둡니다. 높은 구간 H의 출력은 c_out=G_H+P_H·c_mid입니다. 대입하면 `G_H+P_H·G_L+P_H·P_L·c_in`이므로 전체 G는 앞 두 항, 전체 P는 P_H·P_L입니다. 프리픽스 셀의 식은 이 두 구간 캐리식을 합친 결과입니다.
+
+세 구간을 합칠 때 `(H와 M)과 L` 또는 `H와(M과 L)`로 괄호를 달리해도 최종 캐리 관계는 같습니다. 그래서 같은 비트 순서를 유지하며 트리 형태로 묶을 수 있습니다. 그러나 H와 L의 위치를 뒤집으면 생성된 캐리를 막는 위치가 달라져 결과가 바뀔 수 있습니다. 결합법칙과 교환법칙은 다른 성질입니다.
+
+트리의 단계가 늘 때마다 한 셀이 다루는 연속 구간의 길이가 커집니다. 실제 모든 prefix를 만드는 망은 각 자리의 합에도 캐리가 필요하므로 최상위 블록 G 하나만 계산하는 트리와는 다릅니다. 어느 구간을 공유하는지 그림과 인덱스로 추적해야 합니다.
 
 ## 따라 풀기
 
 H의 (G,P)=(0,1), L의 (G,P)=(1,0)이면 전체 G=0+1·1=1, P=1·0=0입니다. 반대로 H=(1,0),L=(0,1)도 G=1이지만 일반적으로 순서를 바꾸면 같다는 뜻은 아닙니다. 지연 가정 t_pg=60ps,t_merge=120ps,t_XOR=80ps,N=16에서는 60+4×120+80=620ps입니다. N=32이면 병합 한 단계가 늘어 740ps입니다.
+
+### 조건을 바꾸어 한 번 더 풀기
+
+상위 H=(G=0,P=0),하위 L=(1,1)이라 합시다. H가 캐리를 막으므로 전체 G=0+0·1=0,P=0입니다. 위치를 뒤집으면 상위가 직접 생성해 G=1이 됩니다.
+
+4비트 전체 [3:0]는 먼저 [3:2]와 [1:0]를 만든 뒤 합칠 수 있습니다. 하지만 bit2의 입력 캐리를 위해서는 [1:0]과 c0가 필요하고, bit1을 위해서는 bit0와 c0가 필요합니다. ‘전체 블록만 빨리 계산하면 모든 합이 자동 완성’이라고 읽지 않습니다.
 
 ## 헷갈리기 쉬운 점
 
@@ -43,6 +56,16 @@ H의 (G,P)=(0,1), L의 (G,P)=(1,0)이면 전체 G=0+1·1=1, P=1·0=0입니다. �
 <p>1. 0,0입니다. 아래의 캐리를 위 구간이 막습니다.</p>
 <p>2. G=1,P=0입니다. 비트 순서는 바꿀 수 없습니다.</p>
 <p>3. log₂8=3단계입니다.</p>
+</details>
+
+### 적용 문제: 직접 구성하고 이유 설명하기
+
+상위 H=(0,1),중간 M=(1,0),하위 L=(0,1)에서 두 괄호 묶음으로 전체 (G,P)를 각각 계산해 같음을 확인하세요.
+
+<details>
+<summary>적용 문제 풀이와 검산</summary>
+<p>먼저 H와 M을 합치면 (0+1·1,1·0)=(1,0)입니다. 여기에 L을 합치면 (1+0·0,0·1)=(1,0)입니다.</p>
+<p>먼저 M과 L을 합치면 (1+0·0,0·1)=(1,0)이고 H와 합치면 (0+1·1,1·0)=(1,0)입니다. 순서는 H,M,L로 유지했고 괄호만 바꾸었습니다.</p>
 </details>
 
 ## 다음으로 이어가기

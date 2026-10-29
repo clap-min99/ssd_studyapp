@@ -22,17 +22,30 @@ binary32는 부호 s 1비트, 저장 지수 e 8비트, 소수 필드 f 23비트�
 
 binary64는 1/11/52비트와 bias 1023, binary128은 1/15/112비트와 bias 16383입니다. 이 레슨의 상세 계산은 binary32에 한정합니다. 원본 표의 binary128 bias 표기는 보충 문서와 대조하여 위 값으로 바로잡았습니다. 넓은 범위와 촘촘한 정밀도는 별개입니다. 큰 값 주변에서는 이웃 표현 간격도 커지며 0.1처럼 유한 이진 분수로 표현되지 않는 값이 있습니다.
 
-<svg viewBox="0 0 446 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c5-13-t c5-13-d">
-<title id="c5-13-t">[선택 심화] 부동소수점 표현: 부호·지수·유효숫자</title>
-<desc id="c5-13-d">binary32의 32비트를 세 필드로 분리한 개념도입니다. 각 칸의 실제 너비 비율은 나타내지 않았습니다.</desc>
-<g fill="var(--accent-soft)" stroke="var(--accent)"><rect x="12" y="25" width="126" height="90" rx="7"/><rect x="160" y="25" width="126" height="90" rx="7"/><rect x="308" y="25" width="126" height="90" rx="7"/></g>
-<g fill="var(--ink)" font-size="14" text-anchor="middle"><text x="75" y="59">부호 s</text><text x="75" y="87">1비트</text><text x="223" y="59">지수 e</text><text x="223" y="87">8비트·bias 127</text><text x="371" y="59">소수 f</text><text x="371" y="87">23비트·정상수 1.f</text></g>
+<svg viewBox="0 0 450 235" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c5-13-study-t c5-13-study-d">
+<title id="c5-13-study-t">binary32의 필드 위치와 정상수 6.5</title>
+<desc id="c5-13-study-d">32비트의 위치는 s=bit31,e=bits30:23,f=bits22:0입니다. 6.5의 부호는 0,저장 지수는 129,소수 시작은 101입니다. 그림의 칸 너비는 비트 수에 비례하지 않습니다.</desc>
+<rect x="20" y="75" width="45" height="60" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="42.5" y="110.0" font-size="15" text-anchor="middle" fill="var(--ink)">0</text><rect x="65" y="75" width="130" height="60" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="130.0" y="110.0" font-size="15" text-anchor="middle" fill="var(--ink)">10000001</text><rect x="195" y="75" width="235" height="60" rx="5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="312.5" y="110.0" font-size="15" text-anchor="middle" fill="var(--ink)">101000…000</text><text x="42" y="50" font-size="13" text-anchor="middle" fill="var(--ink)">s[31]</text><text x="130" y="50" font-size="13" text-anchor="middle" fill="var(--ink)">e[30:23]</text><text x="312" y="50" font-size="13" text-anchor="middle" fill="var(--ink)">f[22:0]</text><text x="225" y="175" font-size="16" text-anchor="middle" fill="var(--ink)">실제 지수 = 129−127 = 2</text><text x="225" y="207" font-size="14" text-anchor="middle" fill="var(--ink)">유효숫자 = 1.101₂ · 값 = 1.625 × 4 = 6.5</text>
 </svg>
-<p class="diagram-caption">그림 5-13. binary32의 32비트를 세 필드로 분리한 개념도입니다. 각 칸의 실제 너비 비율은 나타내지 않았습니다.</p>
+<p class="diagram-caption">그림 5-13. 32비트의 위치는 s=bit31,e=bits30:23,f=bits22:0입니다. 6.5의 부호는 0,저장 지수는 129,소수 시작은 101입니다. 그림의 칸 너비는 비트 수에 비례하지 않습니다.</p>
+
+## 실제 값에서 필드까지 왕복하며 인코딩하기
+
+먼저 절댓값을 이진 분수로 쓰고 가장 앞의 1이 소수점 왼쪽 하나가 되도록 정규화합니다. 이때 소수점을 왼쪽으로 옮긴 횟수가 양의 실제 지수,오른쪽으로 옮긴 횟수가 음의 실제 지수입니다. 정상수라면 저장 지수는 실제 지수+127이고 선행 1 뒤의 소수 부분만 f에 넣습니다.
+
+음수는 부호 비트 s만 1로 두며 전체 비트 패턴의 2의 보수를 취하지 않습니다. 지수 필드도 2의 보수 지수가 아니라 바이어스 표현입니다. 예를 들어 실제 지수 −1의 저장값은 126입니다. 정수 표현에서 배운 부호 규칙을 필드 전체에 그대로 적용하지 않습니다.
+
+읽을 때는 먼저 e가 0인지 255인지 검사하고, 정상 범위일 때만 숨은 1과 e−127을 적용합니다. 0x00000000을 정상수 식으로 계산하면 숨은 1 때문에 0이 아닌 수가 나오는 모순이 생깁니다. 특수 필드를 먼저 분기해야 하는 이유입니다. 이는 데이터 해석 순서이며 이 레슨이 전체 FPU 구현을 요구하는 것은 아닙니다.
 
 ## 따라 풀기
 
 6.5=110.1₂=1.101₂×2²입니다. s=0,e=2+127=129=10000001₂이고 f는 101 뒤에 0을 채운 23비트입니다. 따라서 패턴은 0x40D00000입니다. 역으로 지수 129에서 127을 빼 2, 유효숫자 1.101₂=1.625를 얻고 1.625×4=6.5로 검산합니다. 최소 양의 비정상수는 e=0,f=1이므로 2⁻¹⁴⁹입니다.
+
+### 조건을 바꾸어 한 번 더 풀기
+
+−0.75를 binary32로 만듭니다. 절댓값 0.11₂=1.1₂×2⁻¹이므로 s=1,e=126=01111110₂,f는 1 뒤에 0을 채운 23비트입니다. 전체 패턴은 0xBF400000입니다.
+
+역으로 f/2²³=0.5이므로 유효숫자 1.5,실제 지수 −1,부호 −를 적용해 −1.5×0.5=−0.75입니다. 같은 소수 필드라도 e가 0이면 정상수 해석을 적용할 수 없다는 것을 다시 확인합니다.
 
 ## 헷갈리기 쉬운 점
 
@@ -49,6 +62,16 @@ e=0 또는 255에 정상수 공식을 적용하지 않습니다. NaN은 일반 �
 <p>1. 실제 지수 0에 127을 더한 127입니다.</p>
 <p>2. −∞입니다.</p>
 <p>3. 아닙니다. 0.f와 실제 지수 −126을 사용합니다.</p>
+</details>
+
+### 적용 문제: 직접 구성하고 이유 설명하기
+
+정상수 −10.0의 부호·실제 지수·저장 지수·소수 필드의 시작 비트를 구하세요. 32비트 hex까지 합친 뒤 원래 값으로 복원하세요.
+
+<details>
+<summary>적용 문제 풀이와 검산</summary>
+<p>10=1010₂=1.01₂×2³입니다. s=1,실제 지수 3,저장 지수 130=10000010₂,f는 010 뒤에 0을 채웁니다. 전체 패턴은 0xC1200000입니다.</p>
+<p>복원하면 −(1+1/4)×2³=−1.25×8=−10입니다. 부호만 바꾸면 +10의 패턴 0x41200000이 되며, 전체 2의 보수를 취한 패턴과는 다릅니다.</p>
 </details>
 
 ## 다음으로 이어가기

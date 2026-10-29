@@ -72,6 +72,16 @@ def main():
     check(Fraction(10, 8) + Fraction(-3, 8) == Fraction(7, 8), "Q3.3 addition")
     check(Fraction(10 * 4, 64) == Fraction(5, 8), "fixed multiplication")
     check(struct.unpack(">I", struct.pack(">f", 6.5))[0] == 0x40D00000, "binary32 encoding")
+    check(struct.unpack(">I", struct.pack(">f", -0.75))[0] == 0xBF400000, "negative binary32 example")
+    check(struct.unpack(">I", struct.pack(">f", -10.0))[0] == 0xC1200000, "binary32 application problem")
+    check(Fraction(11*5,64) == Fraction(55,64), "Q3.3 multiplication before rescaling")
+    check(Fraction(55//8,8) == Fraction(3,4), "Q3.3 truncation")
+    check(Fraction(round(Fraction(55,8)),8) == Fraction(7,8), "Q3.3 nearest rounding")
+    check(Fraction(13-6,8) == Fraction(7,8), "Q3.3 signed addition problem")
+    sample = 0b10010110
+    check(sample >> 3 == 0b00010010, "logical shift application problem")
+    check(((sample-256) >> 3) & 255 == 0b11110010, "arithmetic shift application problem")
+    check(((sample >> 3) | (sample << 5)) & 255 == 0b11010010, "rotate application problem")
     midpoint = 1 + 2**-24
     check(struct.unpack(">f", struct.pack(">f", midpoint))[0] == 1.0, "binary32 ties to even")
     q = 0
