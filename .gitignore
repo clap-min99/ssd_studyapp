@@ -11,6 +11,8 @@ venv/
 
 # Django
 db.sqlite3
+reports/firmware-preview.sqlite3
+reports/browser-check/
 *.log
 
 # 에디터/OS

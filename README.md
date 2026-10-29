@@ -124,6 +124,9 @@ flowchart LR
 모델 구조: [커리큘럼 문서](docs/curriculum.md).
 기초 트랙의 장별 범위·작성 형식·용어·그림·검수 기준: [기초 학습 작성 규칙](docs/foundations.md).
 
+펌웨어 동작 원리 트랙: [설계·제작 기준](docs/firmware.md). 첫 장 3개 레슨부터 제작했으며,
+개발 DB에 `python manage.py migrate` 후 `python manage.py seed_firmware`로 반영합니다.
+
 ## 기술 스택
 
 | 영역 | 사용 기술 |
