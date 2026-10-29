@@ -49,6 +49,19 @@ test("Markdown sanitization removes executable HTML and preserves lesson content
     assert.match(operator.parentElement.textContent, /^>>>의 왼쪽 피연산자가 unsigned/);
   });
 
+  await t.test("preserves firmware C examples, tables and folded answers", async () => {
+    const folder = new URL("../../../digest/content/firmware/chapter01/", import.meta.url);
+    for (const name of await readdir(folder)) {
+      const source = await readFile(new URL(name, folder), "utf8");
+      const result = parse(source);
+      assert.equal(result.querySelectorAll("pre code.language-c").length, 1, name);
+      assert.equal(result.querySelectorAll("table").length, (source.match(/^\| ---/gm) || []).length, name);
+      assert.equal(result.querySelectorAll("details summary").length, 1, name);
+      assert.equal(result.querySelectorAll("svg").length, (source.match(/<svg\b/g) || []).length, name);
+      assert.equal(result.querySelector("del"), null, name);
+    }
+  });
+
   await t.test("preserves existing foundation SVG diagrams and accessible labels", async () => {
     const folder = new URL("../../../digest/content/foundations/", import.meta.url);
     const files = (await readdir(folder, { recursive: true })).filter((name) => name.endsWith(".md"));

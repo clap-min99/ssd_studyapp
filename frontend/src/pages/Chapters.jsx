@@ -4,6 +4,7 @@ import { api } from "../api/client";
 
 const TRACKS = [
   { value: "foundations", label: "컴퓨터 구조 기초" },
+  { value: "firmware", label: "펌웨어 동작 원리" },
   { value: "ssd", label: "SSD/NAND" },
   { value: "automotive", label: "자동차 SW" },
 ];
