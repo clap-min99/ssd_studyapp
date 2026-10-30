@@ -111,6 +111,39 @@ BUILDING_BLOCK_LESSONS = [
     (26, "26-review.md", "5장 종합: 계산·저장·배열을 함께 설명하기"),
 ]
 
+ARCHITECTURE_LESSONS = [
+    (1, "01-isa.md", "아키텍처와 ISA: 프로그램이 보는 컴퓨터의 약속"),
+    (2, "02-registers.md", "레지스터와 산술: 명령어의 입력과 결과 추적하기"),
+    (3, "03-immediates.md", "즉시값과 큰 상수: 부호 확장과 LUI"),
+    (4, "04-memory.md", "바이트 주소와 Load·Store: 주소와 값 구별하기"),
+    (5, "05-logic-shifts.md", "논리와 시프트 명령어: 비트 필드 꺼내고 바꾸기"),
+    (6, "06-multiply.md", "[선택 심화] M 확장: 곱의 상위·하위 비트와 나눗셈"),
+    (7, "07-branches.md", "PC와 분기: 다음에 실행할 주소 고르기"),
+    (8, "08-conditionals.md", "조건문: If·Else와 여러 갈래 선택 구현하기"),
+    (9, "09-loops.md", "반복문: 초기화·조건·본문·갱신 추적하기"),
+    (10, "10-arrays.md", "워드 배열: 인덱스를 바이트 주소로 바꾸기"),
+    (11, "11-bytes-strings.md", "바이트와 문자열: 부호 확장·종료 문자·경계"),
+    (12, "12-calls.md", "함수 호출: 인자·반환값·복귀 주소의 이동"),
+    (13, "13-stack.md", "스택과 보존 규칙: 누가 어떤 값을 지킬까"),
+    (14, "14-nonleaf.md", "중첩 호출: 돌아갈 주소와 살아 있는 값 보존하기"),
+    (15, "15-recursion.md", "재귀 호출: 같은 코드에 서로 다른 스택 프레임"),
+    (16, "16-pseudoinstructions.md", "의사명령어: 편한 표기와 실제 명령어 구별하기"),
+    (17, "17-r-i-encoding.md", "R·I 형식: 어셈블리를 32비트 기계어로 조립하기"),
+    (18, "18-s-b-encoding.md", "S·B 형식: 저장 오프셋과 분기 변위 인코딩"),
+    (19, "19-u-j-encoding.md", "U·J 형식: 큰 즉시값과 점프 변위 인코딩"),
+    (20, "20-decode-addressing.md", "기계어 읽기: 즉시값 복원과 주소 지정 방식"),
+    (21, "21-stored-program.md", "저장 프로그램: 명령어·데이터·아키텍처 상태"),
+    (22, "22-memory-map.md", "[선택 심화] 메모리 맵과 지시어: 코드와 데이터 배치"),
+    (23, "23-toolchain.md", "[선택 심화] 컴파일·어셈블·링크·로드의 역할"),
+    (24, "24-endianness.md", "[선택 심화] 엔디언: 워드의 바이트를 주소에 배치하기"),
+    (25, "25-exceptions.md", "[선택 심화] 예외와 인터럽트: 원인·복귀 PC·상태 보존"),
+    (26, "26-signed.md", "[선택 심화] Signed·Unsigned 명령어와 넘침 검사"),
+    (27, "27-float-compressed.md", "[선택 심화] F·C 확장: 데이터 폭과 명령어 길이"),
+    (28, "28-isa-families.md", "ISA의 확장과 비교: RISC-V·MIPS·ARM"),
+    (29, "29-x86.md", "[선택 심화] x86 비교: 피연산자·플래그·가변 길이"),
+    (30, "30-review.md", "6장 종합: 프로그램을 상태 변화로 설명하기"),
+]
+
 CHAPTERS = [
     ("binary-representation", "디지털 설계의 출발점",
      "H&H RISC-V판 1장: 추상화 → 수의 표현 → 논리 게이트 → 전압·CMOS·전력. 그림과 예제, 확인 문제로 기초를 쌓습니다.",
@@ -127,11 +160,14 @@ CHAPTERS = [
     ("digital-building-blocks", "디지털 구성 요소",
      "H&H RISC-V판 5장: 덧셈기·ALU·시프터 → 소수 표현 → 카운터·시프트 레지스터 → 메모리·PLA·FPGA. 블록의 폭·부호·시간과 연결을 함께 익힙니다.",
      "chapter05", BUILDING_BLOCK_LESSONS),
+    ("risc-v-architecture", "RISC-V 아키텍처",
+     "H&H RISC-V판 6장: 레지스터·메모리·어셈블리 → 분기·배열·함수 호출 → 기계어 인코딩과 저장 프로그램. 컴파일·예외·확장·다른 ISA도 연결합니다.",
+     "chapter06", ARCHITECTURE_LESSONS),
 ]
 
 
 class Command(BaseCommand):
-    help = "Harris & Harris RISC-V판 1–5장에 대응하는 기초 챕터와 레슨을 생성·갱신한다."
+    help = "Harris & Harris RISC-V판 1–6장에 대응하는 기초 챕터와 레슨을 생성·갱신한다."
 
     @transaction.atomic
     def handle(self, *args, **kwargs):

@@ -72,9 +72,11 @@ test("Markdown sanitization removes executable HTML and preserves lesson content
       const result = parse(source);
       assert.equal(result.querySelectorAll("svg").length, expected, name);
       assert.equal(result.querySelectorAll("details").length, (source.match(/<details>/g) || []).length, name);
-      if (/chapter0[45][\\/]/.test(name)) {
-        assert.equal(result.querySelectorAll("pre code.language-systemverilog").length,
-          (source.match(/```systemverilog/g) || []).length, name);
+      if (/chapter0[456][\\/]/.test(name)) {
+        for (const language of ["systemverilog", "asm", "sh"]) {
+          assert.equal(result.querySelectorAll(`pre code.language-${language}`).length,
+            (source.match(new RegExp("```" + language, "g")) || []).length, name);
+        }
         assert.equal(result.querySelectorAll("table").length,
           (source.match(/^\| ---/gm) || []).length, name);
       }

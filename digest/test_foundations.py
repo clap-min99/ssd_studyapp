@@ -9,6 +9,7 @@ from django.test import TestCase, override_settings
 from digest.models import Lesson, Tag
 from digest.management.commands.seed_foundations import (
     LESSONS, COMBINATIONAL_LESSONS, SEQUENTIAL_LESSONS, HDL_LESSONS, BUILDING_BLOCK_LESSONS,
+    ARCHITECTURE_LESSONS,
 )
 
 
@@ -168,12 +169,66 @@ class FoundationsTests(TestCase):
             data = response.json()
             self.assertEqual(data["prev_lesson_id"], ids[index-1] if index else None)
             self.assertEqual(data["next_lesson_id"], ids[index+1] if index+1<len(ids) else None)
-            self.assertIsNone(data["next_chapter_slug"])
+            self.assertEqual(data["next_chapter_slug"], "risc-v-architecture")
             self.assert_lesson_content(data["body"], 5)
         self.assertEqual(self.client.get("/api/tags/hardware-description-languages/").json()["next_slug"], fifth.slug)
         self.assertEqual(self.client.get("/api/tags/digital-building-blocks/").json()["prerequisite_slug"], fourth.slug)
         data = self.client.get(f"/api/lessons/{fourth.lessons.last().id}/").json()
         self.assertEqual(data["next_chapter_slug"], fifth.slug)
+
+    def test_sixth_chapter_is_repeatable_preserves_previous_lessons_and_links_from_fifth(self):
+        call_command("seed_foundations", stdout=StringIO())
+        fifth = Tag.objects.get(slug="digital-building-blocks")
+        sixth = Tag.objects.get(slug="risc-v-architecture")
+        sixth.full_clean()
+        self.assertEqual(sixth.prerequisite, fifth)
+        self.assertEqual(sixth.order, 6)
+        self.assertEqual(sixth.category, "foundations")
+        previous = list(Lesson.objects.exclude(chapter=sixth).values_list("id", "chapter_id", "order", "body"))
+        ids = list(sixth.lessons.values_list("id", flat=True))
+        call_command("seed_foundations", stdout=StringIO())
+        self.assertEqual(list(sixth.lessons.values_list("id", flat=True)), ids)
+        self.assertEqual(list(Lesson.objects.exclude(chapter=sixth).values_list("id", "chapter_id", "order", "body")), previous)
+        response = self.client.get("/api/tags/risc-v-architecture/lessons/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([row["order"] for row in response.json()], list(range(1, 31)))
+        self.assertEqual(len(ids), len(ARCHITECTURE_LESSONS))
+        for index, lesson_id in enumerate(ids):
+            response = self.client.get(f"/api/lessons/{lesson_id}/")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data["prev_lesson_id"], ids[index-1] if index else None)
+            self.assertEqual(data["next_lesson_id"], ids[index+1] if index+1<len(ids) else None)
+            self.assertIsNone(data["next_chapter_slug"])
+            self.assert_lesson_content(data["body"], 6)
+        self.assertEqual(self.client.get("/api/tags/digital-building-blocks/").json()["next_slug"], sixth.slug)
+        self.assertEqual(self.client.get("/api/tags/risc-v-architecture/").json()["prerequisite_slug"], fifth.slug)
+        final = self.client.get(f"/api/lessons/{fifth.lessons.last().id}/").json()
+        self.assertEqual(final["next_chapter_slug"], sixth.slug)
+
+    def test_missing_sixth_chapter_rolls_back_new_chapter_and_previous_updates(self):
+        from pathlib import Path
+
+        call_command("seed_foundations", stdout=StringIO())
+        Tag.objects.get(slug="risc-v-architecture").delete()
+        lesson = Lesson.objects.get(chapter__slug="digital-building-blocks", order=1)
+        lesson.body = "보존할 기존 편집"
+        lesson.save(update_fields=["body"])
+        ids = set(Lesson.objects.values_list("id", flat=True))
+        read_text = Path.read_text
+
+        def read_content(path, *args, **kwargs):
+            if "chapter06" in path.parts:
+                raise FileNotFoundError("6장 본문 누락")
+            return read_text(path, *args, **kwargs)
+
+        with patch("digest.management.commands.seed_foundations.Path.read_text", autospec=True, side_effect=read_content):
+            with self.assertRaises(FileNotFoundError):
+                call_command("seed_foundations", stdout=StringIO())
+        lesson.refresh_from_db()
+        self.assertEqual(lesson.body, "보존할 기존 편집")
+        self.assertEqual(set(Lesson.objects.values_list("id", flat=True)), ids)
+        self.assertFalse(Tag.objects.filter(slug="risc-v-architecture").exists())
 
     def test_missing_fifth_chapter_rolls_back_new_chapter_and_previous_updates(self):
         from pathlib import Path
